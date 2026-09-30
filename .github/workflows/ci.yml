@@ -52,6 +52,9 @@ jobs:
       - name: Build Claude Desktop extension
         run: npm run bundle:extension
 
+      - name: Test installed npm package and Desktop entry point
+        run: npm run test:package
+
       - uses: actions/upload-artifact@v4
         if: matrix.os == 'ubuntu-latest' && matrix.node == '24'
         with:
