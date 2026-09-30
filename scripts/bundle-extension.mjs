@@ -7,6 +7,7 @@ import { cpSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { build } from 'esbuild';
+import { stdioCompatPlugin } from './stdio-compat.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const out = join(root, 'dist-extension');
@@ -29,6 +30,7 @@ await build({
   legalComments: 'external',
   // Some dependencies are CommonJS and call require(); give the ESM bundle one.
   banner: { js: "import { createRequire as __cr } from 'node:module'; const require = __cr(import.meta.url);" },
+  plugins: [stdioCompatPlugin],
   logLevel: 'warning',
 });
 

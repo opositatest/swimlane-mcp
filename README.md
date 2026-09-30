@@ -74,14 +74,14 @@ Claude Desktop can also run it this way instead of the extension, in `claude_des
 }
 ```
 
-Pin a major version for a team with `"args": ["-y", "@opositatest/swimlane-mcp@1"]`.
+Pin a tested release for a team by appending its version to the package name (for example, `@opositatest/swimlane-mcp@0.0.2`).
 
 ### Claude Code
 
 ```bash
 claude mcp add swimlane \
-  -e KANBANFLOW_API_KEYS=token_board_1,token_board_2 \
-  -e KANBANFLOW_USER=you@company.com \
+  -e KANBANFLOW_API_KEYS="token_board_1,token_board_2" \
+  -e KANBANFLOW_USER="you@company.com" \
   -- npx -y @opositatest/swimlane-mcp
 ```
 
@@ -93,16 +93,36 @@ Same `command` / `args` / `env` as above:
 - VS Code: `.vscode/mcp.json` → `servers` (add `"type": "stdio"`)
 - OpenCode: `opencode.json` → `mcp` with `"type": "local"`, `"command": ["npx", "-y", "@opositatest/swimlane-mcp"]` and `environment`
 
+### Without npx (global installation)
+
+```bash
+npm install -g @opositatest/swimlane-mcp@latest
+claude mcp add swimlane \
+  -e KANBANFLOW_API_KEYS="token_board_1,token_board_2" \
+  -e KANBANFLOW_USER="you@company.com" \
+  -- swimlane-mcp
+```
+
+For other clients, use `"command": "swimlane-mcp"` with no arguments; OpenCode uses `"command": ["swimlane-mcp"]`. The executable must be on the client's `PATH`. If it is not, use its absolute path.
+
+### Troubleshooting startup
+
+- **`Connection closed` / discovery hangs on version 0.0.1:** MCP 2026 clients can open a subscription before listing tools, which blocked the old stdio bridge. Version **0.0.2+** bundles the fix for both npm and the Desktop extension. Upgrade the global install, or use `@opositatest/swimlane-mcp@latest` in the npx arguments, then restart the MCP/client. No token change is needed.
+- **`swimlane-mcp: command not found` when using npx inside this repository:** npm may resolve the same-named local project instead of the installed package. For development, run `npm run build` and configure `node` with the **absolute path** to `build/main.js`, or use the global executable. Simply running the add command elsewhere will not help if the client later starts npx inside this repository.
+- **Node/PATH:** verify Node 24+ from the environment that launches the client. An absolute path to Node can avoid differences between GUI and terminal environments.
+- **Already registered in Claude Code:** update the existing entry, or remove it with `claude mcp remove swimlane` before adding it again (use the same scope).
+
 ## Development
 
 ```bash
 npm install
-npm run dev          # MCP Inspector against src/main.ts
+npm run dev          # builds the CLI, then opens MCP Inspector against build/main.js
 npm run typecheck    # tsc --noEmit
 npm run lint:check   # Biome (what CI runs)
 npm test             # vitest: tools against a fake multi-board API + end-to-end stdio test
-npm run build        # → build/
+npm run build        # TypeScript modules + bundled, patched CLI → build/
 npm run bundle:extension   # → dist-extension/swimlane-mcp-<version>.mcpb (Claude Desktop extension)
+npm run test:package # after build + bundle:extension: installed tarball and Desktop entry point
 ```
 
 `npm run dev` loads `.env` automatically (Node's `--env-file-if-exists`); copy `.env.example` to `.env` first. Use `nvm use` to pick the Node version in `.node-version`.
@@ -111,6 +131,7 @@ npm run bundle:extension   # → dist-extension/swimlane-mcp-<version>.mcpb (Cla
 
 - `src/main.ts` — CLI entry (`bin`): validates the config and serves over stdio (`serveMCPStdio`)
 - `src/server.ts` — `createMCPServer` with the tools; also mountable over HTTP via `server.fetch`
+- `scripts/stdio-compat.mjs` — guarded build-time fix for TanStack's streaming stdio bridge, shared by the npm CLI and Desktop bundles; see [docs/stdio-compat.md](./docs/stdio-compat.md). Do not run `src/main.ts` directly to test transport compatibility.
 - `src/config.ts` — environment variables, validated with Zod
 - `src/services/kanbanflow-client.ts` — KanbanFlow API for one token: auth, retries, pagination, readable errors
 - `src/services/boards.ts` — `BoardSet`: one client per token, every board loaded in parallel
@@ -126,7 +147,7 @@ Releases are made from GitHub: **Actions → Create Release → Run workflow**, 
 
 It runs [release-it](https://github.com/release-it/release-it): bumps the version, runs lint and tests, builds the Claude Desktop extension, commits and tags `vX.Y.Z`, creates the GitHub Release with the `.mcpb` attached and publishes to npm with provenance. It needs the `NPM_TOKEN` secret (an npm automation token with publish rights on `@opositatest`).
 
-`Publish to npm` publishes an existing release again if that last step failed. CI (`ci.yml`) runs typecheck, lint, tests, build, a package-contents check and the extension build on Linux, Windows and macOS. `security.yml` runs `npm audit` and CodeQL every Monday.
+`Publish to npm` publishes an existing release again if that last step failed. CI (`ci.yml`) runs typecheck, lint, tests, build, a package-contents check, the extension build and installed-package protocol checks on Linux, Windows and macOS. `security.yml` runs `npm audit` and CodeQL every Monday.
 
 ## Security
 
