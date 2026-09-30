@@ -1,0 +1,72 @@
+{
+  "$schema": "https://raw.githubusercontent.com/modelcontextprotocol/mcpb/main/dist/mcpb-manifest-v0.4.schema.json",
+  "manifest_version": "0.4",
+  "name": "swimlane-mcp",
+  "display_name": "Swimlane for KanbanFlow",
+  "version": "0.0.0",
+  "description": "See your KanbanFlow tasks, or a teammate's, across all your boards. Read-only.",
+  "long_description": "Ask Claude things like \"What do I have in progress?\" or \"What is Laura working on?\". Swimlane reads your KanbanFlow boards and never changes them.\n\nYou need one API token per board: in KanbanFlow, open the board menu > Settings > API & Webhooks and create a token.\n\nUnofficial project, not affiliated with KanbanFlow.",
+  "author": {
+    "name": "Opositatest",
+    "email": "dev@opositatest.com",
+    "url": "https://github.com/opositatest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/opositatest/swimlane-mcp"
+  },
+  "homepage": "https://github.com/opositatest/swimlane-mcp",
+  "documentation": "https://github.com/opositatest/swimlane-mcp#readme",
+  "support": "https://github.com/opositatest/swimlane-mcp/issues",
+  "privacy_policies": ["https://github.com/opositatest/swimlane-mcp/blob/main/SECURITY.md"],
+  "license": "MIT",
+  "keywords": ["kanbanflow", "kanban", "tasks", "boards", "read-only"],
+  "icon": "icon.png",
+  "localization": {
+    "resources": "mcpb-resources/${locale}.json",
+    "default_locale": "en-US"
+  },
+  "server": {
+    "type": "node",
+    "entry_point": "server/main.js",
+    "mcp_config": {
+      "command": "node",
+      "args": ["${__dirname}/server/main.js"],
+      "env": {
+        "KANBANFLOW_API_KEYS": "${user_config.kanbanflow_api_keys}",
+        "KANBANFLOW_USER": "${user_config.kanbanflow_user}"
+      }
+    }
+  },
+  "tools": [
+    {
+      "name": "list_tasks",
+      "description": "Lists the tasks of a person (you by default) on every configured board."
+    },
+    {
+      "name": "list_boards",
+      "description": "Shows the configured boards: columns, colors and members."
+    }
+  ],
+  "user_config": {
+    "kanbanflow_api_keys": {
+      "type": "string",
+      "title": "KanbanFlow API tokens",
+      "description": "One token per board. To use several boards, separate them with commas. Get them in KanbanFlow: board menu > Settings > API & Webhooks. / Un token por tablero, separados por comas.",
+      "sensitive": true,
+      "required": true
+    },
+    "kanbanflow_user": {
+      "type": "string",
+      "title": "Your KanbanFlow email",
+      "description": "The email you use in KanbanFlow, so Claude knows which tasks are yours. / El email con el que entras en KanbanFlow.",
+      "required": false
+    }
+  },
+  "compatibility": {
+    "platforms": ["darwin", "win32"],
+    "runtimes": {
+      "node": ">=24.0.0"
+    }
+  }
+}

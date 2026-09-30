@@ -1,0 +1,20 @@
+{
+  "hooks": {
+    "after:bump": "npm run lint:check && npm test && npm run bundle:extension"
+  },
+  "git": {
+    "commitMessage": "chore: release v${version}",
+    "tagName": "v${version}",
+    "requireCleanWorkingDir": true,
+    "requireBranch": "main",
+    "requireUpstream": true
+  },
+  "github": {
+    "release": true,
+    "releaseName": "v${version}",
+    "assets": ["dist-extension/*.mcpb"]
+  },
+  "npm": {
+    "publish": false
+  }
+}

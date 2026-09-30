@@ -1,0 +1,16 @@
+{
+  "display_name": "Swimlane para KanbanFlow",
+  "description": "Consulta tus tareas de KanbanFlow, o las de un compañero, en todos tus tableros. Solo lectura.",
+  "long_description": "Pregúntale a Claude cosas como «¿Qué tengo en curso?» o «¿En qué está trabajando Laura?». Swimlane lee tus tableros de KanbanFlow y nunca los modifica.\n\nNecesitas un token de API por tablero: en KanbanFlow, abre el menú del tablero > Settings > API & Webhooks y crea un token.\n\nProyecto no oficial, sin relación con KanbanFlow.",
+  "keywords": ["kanbanflow", "kanban", "tareas", "tableros", "solo lectura"],
+  "tools": [
+    {
+      "name": "list_tasks",
+      "description": "Lista las tareas de una persona (tú, por defecto) en todos los tableros configurados."
+    },
+    {
+      "name": "list_boards",
+      "description": "Muestra los tableros configurados: columnas, colores y miembros."
+    }
+  ]
+}

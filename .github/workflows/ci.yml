@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: ${{ matrix.os }} · Node ${{ matrix.node }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # 24 = LTS, the .node-version minimum and what Claude Desktop ships; 26 = Current.
+        # Windows and macOS because that is where Claude Desktop users are.
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        node: ['24']
+        include:
+          - os: ubuntu-latest
+            node: '26'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: 'npm'
+
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint:check
+      - run: npm test
+      - run: npm run build
+
+      # The package that npx installs must contain the entry point and nothing private
+      - name: Check npm package contents
+        shell: bash
+        run: |
+          npm pack --dry-run --json > pack.json
+          node -e "
+            const files = require('./pack.json')[0].files.map((f) => f.path);
+            const bad = files.filter((f) => !/^(build\/|README\.md$|LICENSE$|package\.json$)/.test(f));
+            if (!files.includes('build/main.js')) { console.error('build/main.js missing from package'); process.exit(1); }
+            if (bad.length) { console.error('Unexpected files in package:', bad); process.exit(1); }
+            console.error('Package files OK:', files.length);
+          "
+
+      - name: Build Claude Desktop extension
+        run: npm run bundle:extension
+
+      - uses: actions/upload-artifact@v4
+        if: matrix.os == 'ubuntu-latest' && matrix.node == '24'
+        with:
+          name: claude-desktop-extension
+          path: dist-extension/*.mcpb
+          retention-days: 14

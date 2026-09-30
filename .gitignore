@@ -1,0 +1,30 @@
+# Dependencies
+node_modules/
+
+# Build output
+build/
+dist-extension/
+*.tsbuildinfo
+
+# Packages (npm pack, Claude Desktop extension) — published through releases, never committed
+*.tgz
+*.mcpb
+pack.json
+
+# Secrets: real API tokens only live in .env (see .env.example)
+.env
+.env.*
+!.env.example
+
+# Tests and logs
+coverage/
+*.log
+
+# OS and editors
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Local AI assistant settings
+.claude/
