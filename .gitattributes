@@ -1,0 +1,7 @@
+# Same line endings on every OS: Biome requires LF, and Windows checkouts would turn it into CRLF
+* text=auto eol=lf
+
+# Binary files
+*.png binary
+*.mcpb binary
+*.tgz binary

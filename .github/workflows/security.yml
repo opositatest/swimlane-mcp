@@ -10,6 +10,7 @@ on:
 
 permissions:
   contents: read
+  actions: read # CodeQL reads the workflow run
   security-events: write
 
 jobs:
@@ -33,6 +34,8 @@ jobs:
 
   codeql:
     name: CodeQL Analysis
+    # Code scanning on private repos needs a GitHub Code Security license; on public repos it is free.
+    if: github.event.repository.private != true
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
