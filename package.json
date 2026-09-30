@@ -1,8 +1,16 @@
 {
   "name": "@opositatest/swimlane-mcp",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "Unofficial read-only MCP server for KanbanFlow: list a person's tasks across all your boards from any MCP client. Not affiliated with KanbanFlow.",
-  "keywords": ["mcp", "model-context-protocol", "kanbanflow", "kanban", "swimlane", "claude", "tanstack-ai"],
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "kanbanflow",
+    "kanban",
+    "swimlane",
+    "claude",
+    "tanstack-ai"
+  ],
   "homepage": "https://github.com/opositatest/swimlane-mcp",
   "bugs": "https://github.com/opositatest/swimlane-mcp/issues",
   "repository": {
@@ -26,7 +34,11 @@
   "bin": {
     "swimlane-mcp": "build/main.js"
   },
-  "files": ["build", "README.md", "LICENSE"],
+  "files": [
+    "build",
+    "README.md",
+    "LICENSE"
+  ],
   "engines": {
     "node": ">=24"
   },
