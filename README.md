@@ -46,7 +46,17 @@ See [TOOLS.md](./TOOLS.md) for parameters and output format.
 
 ## Installation
 
-### Claude Desktop (recommended, no technical knowledge needed)
+**Recommended: use `npx` with `@latest` and `--prefer-online`** to request the latest published release whenever the MCP server starts, without manually reinstalling the package. This needs Node.js 24+ and registry access. Newly published releases can take a few minutes to become available.
+
+| Setup | How updates are picked up |
+|-------|---------------------------|
+| `npx --prefer-online …@latest` (recommended) | Checks npm metadata when the server starts; restart the MCP connection/client after a release. |
+| Downloaded `.mcpb` extension | Contains a bundled version; download and install the new `.mcpb` to update it. |
+| Global `swimlane-mcp` installation | Uses the installed version; rerun `npm install -g …@latest`, then restart. |
+
+**No running server updates in place.** Publishing a release does not restart clients, change their configuration or replace their installed copies. Use the `npx` setup below if you want new tools on the next server startup.
+
+### Claude Desktop extension (easy setup, manual updates)
 
 1. Download **`swimlane-mcp-….mcpb`** from the [latest release](https://github.com/opositatest/swimlane-mcp/releases/latest).
 2. Double-click it and press **Install**.
@@ -60,7 +70,7 @@ The extension declares **macOS, Windows and Linux (including Ubuntu)** compatibi
 
 ### Other clients (npx)
 
-Other clients launch the server with `npx`. It needs **Node.js 24 or newer** on the `PATH` the client sees: GUI apps may not use your terminal's `nvm` version, so make 24+ the default (`nvm alias default 24`).
+This is the recommended setup for picking up new releases on server startup, including in Claude Code. It needs **Node.js 24 or newer** on the `PATH` the client sees: GUI apps may not use your terminal's `nvm` version, so make 24+ the default (`nvm alias default 24`).
 
 Claude Desktop can also run it this way instead of the extension, in `claude_desktop_config.json`:
 
@@ -71,6 +81,7 @@ Claude Desktop can also run it this way instead of the extension, in `claude_des
       "command": "npx",
       "args": [
         "-y",
+        "--prefer-online",
         "--@opositatest:registry=https://registry.npmjs.org",
         "@opositatest/swimlane-mcp@latest"
       ],
@@ -93,7 +104,7 @@ Claude Desktop can also run it this way instead of the extension, in `claude_des
 | `@opositatest/swimlane-mcp@0.0.3` | Exactly that release, for teams that want to freeze a tested version. |
 | `@opositatest/swimlane-mcp` | No explicit version; it may use a local dependency rather than the latest release. |
 
-Restart the MCP server/client to pick up an update; a running server does not update itself. If `@latest` still resolves an older release just after publication, add `--prefer-online` before the package name to ask npm to revalidate cached metadata.
+The recommended examples include `--prefer-online` to revalidate npm's cached metadata at startup. Restart the MCP server/client to pick up an update; a running server does not update itself. If npm is still processing a new release, wait a few minutes and restart again. An exact version intentionally opts out of tracking `latest`.
 
 The examples explicitly select npmjs.org for the `@opositatest` scope. This prevents a project's `.npmrc` from redirecting this server to GitHub Packages or another registry, without changing how the project's own npm commands resolve its packages.
 
@@ -105,14 +116,34 @@ With Node.js 24+ installed, copy and paste this command, replacing the tokens an
 claude mcp add --scope user \
   -e KANBANFLOW_API_KEYS="token_board_1,token_board_2" \
   -e KANBANFLOW_USER="you@company.com" \
-  swimlane -- npx -y \
+  swimlane -- npx -y --prefer-online \
   --@opositatest:registry=https://registry.npmjs.org \
   @opositatest/swimlane-mcp@latest
 ```
 
-`--scope user` makes it available in all your projects. Restart Claude Code, check the connection with `/mcp`, and ask: "What tasks do I have in KanbanFlow?"
+**Keep `--scope user`: this registers Swimlane once for your user, across all Claude Code projects**, regardless of the directory where you run the command. Without this flag, Claude Code defaults to `local` scope, which only applies to the current project.
 
-If `swimlane` is already registered at user scope, first run `claude mcp remove --scope user swimlane`, then add it again with the command above. If it was registered at another scope, update or remove that entry at its original scope too.
+| Claude Code scope | Where Swimlane is available |
+|-------------------|----------------------------|
+| `user` (recommended) | All projects for your user. Each person runs the installation command once with their own tokens. |
+| `local` (default if omitted) | Only the current project, in your private configuration. |
+| `project` | Only the current project, through its `.mcp.json`; do not commit API tokens. |
+
+MCP scope and npm installation are separate: `npm install -g` makes an executable available, but does **not** register it across Claude Code projects or enable updates.
+
+Restart Claude Code, check the connection with `/mcp`, and ask: "What tasks do I have in KanbanFlow?"
+
+#### Migrating an existing project-only installation
+
+**Existing installations are not migrated automatically by a release or a documentation update.** Keep your tokens/email available before removing any entry:
+
+1. Open the project where Swimlane was registered and check its entry/scope in `/mcp`.
+2. If it is `local`, run `claude mcp remove --scope local swimlane` from that project. For a `project` entry, use `--scope project` instead. If replacing an existing `user` entry, use `--scope user`.
+3. Run the recommended `claude mcp add --scope user …` command above with your existing tokens/email. It uses `npx --prefer-online …@latest`, so future releases are requested on server startup.
+4. Remove any obsolete project-local or differently named duplicates; an old entry can still connect you to an old server.
+5. Restart Claude Code and check `/mcp` in another project too.
+
+If you edit the configuration instead, move the complete entry to user scope and preserve its `env` while replacing `command`/`args` with the recommended `npx` setup. Updating only a global npm package or changing only the launch command does not change the MCP scope.
 
 Replace `@latest` with an exact version (for example `@0.0.3`) to freeze a release you have tested. To change that version later, edit the existing configuration or remove and re-add the server at the same scope.
 
@@ -122,13 +153,15 @@ Same `command` / `args` / `env` as above:
 
 - Cursor: `.cursor/mcp.json` → `mcpServers`
 - VS Code: `.vscode/mcp.json` → `servers` (add `"type": "stdio"`)
-- OpenCode: `opencode.json` → `mcp` with `"type": "local"`, `"command": ["npx", "-y", "--@opositatest:registry=https://registry.npmjs.org", "@opositatest/swimlane-mcp@latest"]` and `environment`
+- OpenCode: `opencode.json` → `mcp` with `"type": "local"`, `"command": ["npx", "-y", "--prefer-online", "--@opositatest:registry=https://registry.npmjs.org", "@opositatest/swimlane-mcp@latest"]` and `environment`
 
-### Without npx (global installation)
+### Without npx (global installation, manual updates)
+
+**This setup does not check for updates when the server starts.** Use `npx` above to follow new releases. Reinstalling globally also does not change an existing MCP entry to `npx`.
 
 ```bash
 npm install -g --@opositatest:registry=https://registry.npmjs.org @opositatest/swimlane-mcp@latest
-claude mcp add swimlane \
+claude mcp add --scope user swimlane \
   -e KANBANFLOW_API_KEYS="token_board_1,token_board_2" \
   -e KANBANFLOW_USER="you@company.com" \
   -- swimlane-mcp
@@ -139,7 +172,7 @@ For other clients, use `"command": "swimlane-mcp"` with no arguments; OpenCode u
 ### Troubleshooting startup
 
 - **`E404` from GitHub Packages / `CONNECTION_CLOSED`:** a project's `.npmrc` may redirect `@opositatest` to `https://npm.pkg.github.com`, but this package is published on npmjs.org. Use the examples above, including `--@opositatest:registry=https://registry.npmjs.org` before the package name. A plain `--registry` does not override a scoped registry mapping. Do not change your KanbanFlow tokens or the project's `.npmrc`.
-- **It keeps running an old version:** use `@opositatest/swimlane-mcp@latest` (or bump a pinned version) and restart the client. If registry metadata is stale just after publication, add `--prefer-online` before the package name. For a global installation, rerun the `npm install -g` command above; it does not update automatically.
+- **It keeps running an old version:** inspect the entry in `/mcp`, including its scope and any duplicate old servers. Use the recommended `npx --prefer-online …@latest` command and restart the MCP connection/client. A release can take a few minutes to propagate on npm. For a global installation, rerun `npm install -g …@latest` before restarting; for a downloaded extension, install the new `.mcpb`. Restarting alone updates neither of those installed copies.
 - **`Connection closed` / discovery hangs on version 0.0.1:** MCP 2026 clients can open a subscription before listing tools, which blocked the old stdio bridge. Version **0.0.2+** bundles the fix for both npm and the Desktop extension. Upgrade the global install, or use `@opositatest/swimlane-mcp@latest` in the npx arguments, then restart the MCP/client. No token change is needed.
 - **`swimlane-mcp: command not found` when using npx inside this repository:** npm may resolve the same-named local project instead of the installed package. For development, run `npm run build` and configure `node` with the **absolute path** to `build/main.js`, or use the global executable. Simply running the add command elsewhere will not help if the client later starts npx inside this repository.
 - **Node/PATH:** verify Node 24+ from the environment that launches the client. An absolute path to Node can avoid differences between GUI and terminal environments.

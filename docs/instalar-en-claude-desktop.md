@@ -78,7 +78,9 @@ Más detalles en [SECURITY.md](../SECURITY.md).
 
 ## Actualizar
 
-Cuando haya una versión nueva, descarga el nuevo `.mcpb` de la [página de versiones](https://github.com/opositatest/swimlane-mcp/releases/latest) y vuelve a instalarlo. Tu configuración se mantiene.
+La extensión descargada contiene una versión concreta: **publicar una release o reiniciar Claude no actualiza esa copia**. Cuando haya una versión nueva, descarga el nuevo `.mcpb` de la [página de versiones](https://github.com/opositatest/swimlane-mcp/releases/latest) y vuelve a instalarlo. Tu configuración se mantiene.
+
+Si quieres obtener las nuevas versiones sin reinstalar manualmente, utiliza la [configuración recomendada con `npx`](../README.md#other-clients-npx): `@latest` y `--prefer-online` consultan npm al arrancar el servidor. Necesita Node.js 24+ y acceso al registro; después de una release, reinicia la conexión MCP o Claude. No se actualiza un proceso que sigue abierto. Si sustituyes la extensión por este método, desactiva la anterior para evitar dos servidores duplicados.
 
 ---
 
