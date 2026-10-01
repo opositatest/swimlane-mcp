@@ -28,13 +28,31 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Fails early and with a clear message when the version in package.json cannot be published:
+      # a release tag that does not match it, or a version that is already on the registry (npm never
+      # overwrites one). Without this, the run ends with a raw npm error that reads like a broken token.
       - name: Validate release version
-        if: github.event_name == 'release'
         run: |
-          node -e "const fs = require('node:fs'); const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8')); const tag = process.env.GITHUB_REF_NAME.replace(/^v/, ''); if (pkg.version !== tag) { console.error(`Release tag ${process.env.GITHUB_REF_NAME} does not match package.json version ${pkg.version}. Update package.json first or use the Create Release workflow to create the next version.`); process.exit(1); }"
+          VERSION=$(node -p "require('./package.json').version")
+          if [ "${{ github.event_name }}" = "release" ]; then
+            TAG="${GITHUB_REF_NAME#v}"
+            if [ "$VERSION" != "$TAG" ]; then
+              echo "::error::Release tag $GITHUB_REF_NAME does not match package.json version $VERSION. Update package.json first or use the Create Release workflow to create the next version."
+              exit 1
+            fi
+          fi
+          if npm view "@opositatest/swimlane-mcp@$VERSION" version >/dev/null 2>&1; then
+            echo "::error::@opositatest/swimlane-mcp@$VERSION is already published, and npm never overwrites a version. This fallback only publishes a version that is not on the registry yet: run Actions > Create Release to bump it."
+            exit 1
+          fi
+          echo "Publishing @opositatest/swimlane-mcp@$VERSION"
+
+      # Trusted publishing (OIDC): npm authenticates the workflow through GitHub, so no npm token is
+      # stored in this repository. The trust relationship lives in npm (package > Settings > Trusted
+      # publishing), one connection per workflow file.
+      - name: Use the latest npm (OIDC needs 11.21+ to move the `latest` dist-tag)
+        run: npm install -g npm@latest && npm --version
 
       # prepublishOnly runs lint:check, tests and build
       - name: Publish
         run: npm publish --access public --provenance
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
