@@ -1,8 +1,8 @@
 import { toolDefinition } from '@tanstack/ai';
 import { z } from 'zod';
-import type { BoardContext, PersonMatch, Ref } from '../services/board-context.js';
-import { type LoadedBoard, selectBoards } from '../services/boards.js';
+import type { PersonMatch, Ref } from '../services/board-context.js';
 import { INTERPRETATION_NOTE, READ_ONLY, type ToolDeps } from './deps.js';
+import { collectTasks } from './task-query.js';
 import { taskView } from './task-view.js';
 
 const DEFAULT_LIMIT = 50;
@@ -44,16 +44,6 @@ const inputSchema = z.object({
     .describe(`Maximum tasks returned (default ${DEFAULT_LIMIT}, max ${MAX_LIMIT}). Counts always cover every match.`),
 });
 
-function columnIds(ctx: BoardContext, wanted: string[] | undefined): Set<string> | undefined {
-  if (!wanted) return undefined;
-  const lower = wanted.map((value) => value.toLowerCase());
-  return new Set(
-    ctx.board.columns
-      .filter((column) => wanted.includes(column.uniqueId) || lower.includes(column.name.toLowerCase()))
-      .map((column) => column.uniqueId)
-  );
-}
-
 export function createListTasksTool(deps: ToolDeps) {
   return toolDefinition({
     name: 'list_tasks',
@@ -78,56 +68,15 @@ export function createListTasksTool(deps: ToolDeps) {
       );
     }
 
-    const loaded = await deps.boards.load();
-    const { selected, warnings } = selectBoards(loaded.boards, input.boards);
+    const collected = await collectTasks(deps, {
+      person,
+      boards: input.boards,
+      columns: input.columns,
+      loadAllPages: input.loadAllPages,
+    });
 
-    // Who the person is on each board, matched on every board separately.
-    const matches = selected.map((board) => ({ board, match: board.ctx.findPeople(person) }));
-    for (const { board, match } of matches) {
-      if (match.users.length > 1) {
-        warnings.push(
-          `"${person}" matched ${match.users.length} members on board "${board.ctx.board.name}" ` +
-            `(${match.users.map((u) => u.name).join(', ')}); tasks of all of them are included. Be more specific if needed.`
-        );
-      }
-    }
-    const withPerson = matches.filter(({ match }) => match.users.length > 0);
-    if (withPerson.length === 0) warnings.push(`"${person}" is not a member of any searched board.`);
-
-    // Columns are resolved per board; warn only when a column exists on none of them.
-    const perBoardColumns = new Map<LoadedBoard, Set<string> | undefined>();
-    for (const { board } of withPerson) perBoardColumns.set(board, columnIds(board.ctx, input.columns));
-    for (const column of input.columns ?? []) {
-      const exists = withPerson.some(({ board }) => (columnIds(board.ctx, [column])?.size ?? 0) > 0);
-      if (!exists && withPerson.length > 0) warnings.push(`Column "${column}" exists on none of the searched boards.`);
-    }
-
-    const results = await Promise.all(
-      withPerson.map(async ({ board, match }) => {
-        const wantedColumns = perBoardColumns.get(board);
-        const fetched = await board.client.getAllTasks({
-          expandColumnIds: input.loadAllPages ? 'all' : wantedColumns,
-        });
-        const ids = new Set(match.users.map((u) => u.id));
-        const cells = fetched.cells.filter((cell) => !wantedColumns || wantedColumns.has(cell.columnId));
-        const tasks = cells
-          .flatMap((cell) => cell.tasks)
-          .filter((task) => [...board.ctx.peopleIds(task)].some((id) => ids.has(id)))
-          .sort((a, b) => board.ctx.columnIndex(a.columnId) - board.ctx.columnIndex(b.columnId));
-        const incompleteCells = cells
-          .filter((cell) => !cell.complete)
-          .map((cell) => ({
-            board: board.ctx.ref,
-            column: board.ctx.column(cell.columnId),
-            swimlane: board.ctx.swimlane(cell.swimlaneId) ?? null,
-            loadedTasks: cell.tasks.length,
-          }));
-        return { board, tasks, incompleteCells, requests: fetched.requests };
-      })
-    );
-
-    const matched = results.flatMap(({ board, tasks }) => tasks.map((task) => ({ board, task })));
-    const incompleteCells = results.flatMap((r) => r.incompleteCells);
+    const matched = collected.boards.flatMap(({ board, tasks }) => tasks.map((task) => ({ board, task })));
+    const incompleteCells = collected.boards.flatMap((board) => board.incompleteCells);
     const limit = input.limit ?? DEFAULT_LIMIT;
     const detail = input.detail ?? 'summary';
 
@@ -143,18 +92,19 @@ export function createListTasksTool(deps: ToolDeps) {
       person: {
         requested: person,
         source: requested ? 'argument' : 'KANBANFLOW_USER',
-        matches: matches.map(({ board, match }): { board: Ref } & PersonMatch => ({ board: board.ctx.ref, ...match })),
+        matches: collected.personMatches.map(({ board, match }): { board: Ref } & PersonMatch => ({
+          board: board.ctx.ref,
+          ...(match ?? { users: [] }),
+        })),
       },
       meta: {
         fetchedAt: new Date().toISOString(),
         filters: input,
-        warnings,
-        boardsSearched: selected.map(({ ctx }) => ctx.ref),
-        boardsWherePersonIsNotMember: matches
-          .filter(({ match }) => match.users.length === 0)
-          .map(({ board }) => board.ctx.ref),
-        failedBoards: loaded.failures,
-        complete: incompleteCells.length === 0 && loaded.failures.length === 0,
+        warnings: collected.warnings,
+        boardsSearched: collected.selected.map(({ ctx }) => ctx.ref),
+        boardsWherePersonIsNotMember: collected.boardsWherePersonIsNotMember,
+        failedBoards: collected.loaded.failures,
+        complete: incompleteCells.length === 0 && collected.loaded.failures.length === 0,
         incompleteCells,
         ...(incompleteCells.length > 0 && {
           howToComplete:
@@ -164,11 +114,11 @@ export function createListTasksTool(deps: ToolDeps) {
         tasksMatched: matched.length,
         tasksReturned: Math.min(matched.length, limit),
         truncatedByLimit: matched.length > limit,
-        apiRequests: loaded.boards.length * 2 + results.reduce((sum, r) => sum + 1 + r.requests, 0),
+        apiRequests: collected.apiRequests,
         note: INTERPRETATION_NOTE,
       },
       counts: {
-        byBoard: results.map(({ board, tasks }) => ({ board: board.ctx.ref, count: tasks.length })),
+        byBoard: collected.boards.map(({ board, tasks }) => ({ board: board.ctx.ref, count: tasks.length })),
         byColumn: [...byColumn.values()],
       },
       tasks: matched.slice(0, limit).map(({ board, task }) => ({

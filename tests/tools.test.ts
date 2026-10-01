@@ -140,3 +140,207 @@ describe('list_tasks', () => {
     expect(out.meta.failedBoards).toEqual([{ token: 2, error: expect.stringContaining('HTTP 401') }]);
   });
 });
+
+describe('get_task', () => {
+  const multi = { KANBANFLOW_API_KEYS: 'token-a,token-b', KANBANFLOW_USER: 'ada@example.com' };
+
+  it('returns one task in full, with its comments and author names', async () => {
+    const out = await toolsFor(multi).get_task.execute({ taskId: 't1' });
+    expect(out.task).toMatchObject({
+      board: { id: 'b1', name: 'Test board' },
+      id: 't1',
+      name: 'Task t1',
+      url: 'https://kanbanflow.com/t/t1',
+      column: { id: 'c-todo', name: 'Backlog' },
+      color: { value: 'red', boardName: 'Urgent', boardDescription: 'Before anything else' },
+      labels: ['Bug'],
+      collaborators: [{ id: 'u1', name: 'Ada Lovelace' }],
+      descriptionTruncated: false,
+    });
+    expect(out.task.raw).toMatchObject({ _id: 't1' });
+    expect(out.comments).toEqual([
+      { id: 'k1', author: { id: 'u2', name: 'Grace Hopper' }, createdAt: '2026-09-28T09:00:00Z', text: 'Looks good' },
+    ]);
+    expect(out.meta.boardsSearched).toEqual([
+      { id: 'b1', name: 'Test board' },
+      { id: 'b2', name: 'Other team' },
+    ]);
+    expect(out.meta.boardsWithoutTheTask).toBeUndefined();
+  });
+
+  it('finds a task on a later board and reports which boards did not have it', async () => {
+    const out = await toolsFor(multi).get_task.execute({ taskId: 'b-1' });
+    expect(out.task.board).toEqual({ id: 'b2', name: 'Other team' });
+    expect(out.task.collaborators).toEqual([{ id: 'u9', name: 'Ada Lovelace' }]);
+    expect(out.comments[0]).toMatchObject({
+      author: { id: 'u8', name: 'Adam Smith' },
+      text: '@Ada can you review this?',
+    });
+    expect(out.meta.boardsWithoutTheTask).toEqual([{ board: { id: 'b1', name: 'Test board' }, status: 404 }]);
+  });
+
+  it('skips the comments request when asked', async () => {
+    const out = await toolsFor(multi).get_task.execute({ taskId: 't1', includeComments: false });
+    expect(out.comments).toBeNull();
+    expect(api.requests.some((request) => request.includes('/comments'))).toBe(false);
+  });
+
+  it('looks only on the board it is pointed at', async () => {
+    const tools = toolsFor(multi);
+    await expect(tools.get_task.execute({ taskId: 't1', board: 'Other team' })).rejects.toThrow(
+      'is not on board "Other team"'
+    );
+    await expect(tools.get_task.execute({ taskId: 't1', board: 'Nope' })).rejects.toThrow('matched nothing');
+  });
+
+  it('reports a task id that exists on no board, and boards that failed to load', async () => {
+    await expect(toolsFor(multi).get_task.execute({ taskId: 'ghost' })).rejects.toThrow(
+      'is not on any of the 2 searched board'
+    );
+    await expect(
+      toolsFor({ KANBANFLOW_API_KEYS: 'token-a,token-bad' }).get_task.execute({ taskId: 'ghost' })
+    ).rejects.toThrow('could not be loaded');
+  });
+});
+
+describe('list_comments', () => {
+  const multi = { KANBANFLOW_API_KEYS: 'token-a,token-b', KANBANFLOW_USER: 'ada@example.com' };
+  const day = { from: '2026-09-28T00:00:00Z', to: '2026-09-29T00:00:00Z' };
+
+  it('finds the newest comments that mention a person, across boards', async () => {
+    const out = await toolsFor(multi).list_comments.execute({ person: 'me', ...day });
+    // kb1 (11:00) then k2 (10:06); k1 does not mention Ada, k3 is outside the window, kb2 does not mention Ada.
+    expect(out.comments.map((comment: { id: string }) => comment.id)).toEqual(['kb1', 'k2']);
+    expect(out.comments[0]).toMatchObject({
+      text: '@Ada can you review this?',
+      author: { id: 'u8', name: 'Adam Smith' },
+      board: { id: 'b2', name: 'Other team' },
+      task: { id: 'b-1', name: 'Task b-1', column: { name: 'To do' } },
+    });
+    expect(out.comments[1].task).toMatchObject({ id: 't2', column: { name: 'Backlog' } });
+    expect(out.person).toMatchObject({ resolved: 'ada@example.com', source: 'me (KANBANFLOW_USER)' });
+    expect(out.person.textSearched).toEqual([
+      { board: { id: 'b1', name: 'Test board' }, needles: ['Ada Lovelace', 'Ada'] },
+      { board: { id: 'b2', name: 'Other team' }, needles: ['Ada Lovelace', 'Ada'] },
+    ]);
+    expect(out.meta.commentsMatched).toBe(2);
+    expect(out.meta.events.complete).toBe(true);
+    expect(out.meta.events.commentEvents).toBe(4);
+    expect(out.meta.tasksScanned).toBe(4);
+  });
+
+  it('returns every comment in the window when no person is given', async () => {
+    const out = await toolsFor(multi).list_comments.execute({ ...day });
+    expect(out.person).toBeNull();
+    expect(out.comments.map((comment: { id: string }) => comment.id)).toEqual(['kb2', 'kb1', 'k2', 'k1']);
+  });
+
+  it('filters by text and by board, and honors the limit', async () => {
+    const tools = toolsFor(multi);
+    const byText = await tools.list_comments.execute({ text: '@ada', ...day });
+    expect(byText.comments.map((comment: { id: string }) => comment.id)).toEqual(['kb1', 'k2']);
+
+    const byBoard = await tools.list_comments.execute({ boards: ['Other team'], ...day });
+    expect(byBoard.comments.map((comment: { id: string }) => comment.id)).toEqual(['kb2', 'kb1']);
+    expect(byBoard.meta.boardsSearched).toEqual([{ id: 'b2', name: 'Other team' }]);
+
+    const limited = await tools.list_comments.execute({ person: 'ada', limit: 1, ...day });
+    expect(limited.comments.map((comment: { id: string }) => comment.id)).toEqual(['kb1']);
+    expect(limited.meta.truncatedByLimit).toBe(true);
+  });
+
+  it('says when the newest tasks were not read (maxTasks) and when the person is not a member', async () => {
+    const tools = toolsFor(multi);
+    // Only the most recently commented task is read: b-2 (11:05), whose comment does not mention Ada.
+    const out = await tools.list_comments.execute({ person: 'ada', maxTasks: 1, ...day });
+    expect(out.comments).toEqual([]);
+    expect(out.meta.tasksWithCommentEvents).toBe(4);
+    expect(out.meta.tasksScanned).toBe(1);
+    expect(out.meta.tasksTruncatedByMaxTasks).toBe(true);
+
+    const stranger = await tools.list_comments.execute({ person: 'Nobody', ...day });
+    expect(stranger.comments).toEqual([]);
+    expect(stranger.meta.boardsWherePersonIsNotMember).toHaveLength(2);
+    expect(stranger.meta.warnings.join(' ')).toContain('is not a member of any searched board');
+  });
+
+  it('needs a configured user to resolve "me"', async () => {
+    await expect(
+      toolsFor({ KANBANFLOW_API_KEYS: 'token-a' }).list_comments.execute({ person: 'me', ...day })
+    ).rejects.toThrow('KANBANFLOW_USER');
+  });
+});
+
+describe('search_tasks', () => {
+  const multi = { KANBANFLOW_API_KEYS: 'token-a,token-b' };
+
+  it('finds tasks by text across boards and says which fields matched', async () => {
+    const out = await toolsFor(multi).search_tasks.execute({ query: 'task t3' });
+    expect(out.tasks.map((t: { id: string }) => t.id)).toEqual(['t3']);
+    expect(out.tasks[0]).toMatchObject({
+      board: { id: 'b1', name: 'Test board' },
+      column: { name: 'Doing' },
+      matchedFields: ['name'],
+    });
+    expect(out.query).toEqual({ text: 'task t3', terms: ['task', 't3'], fields: ['name', 'description'] });
+  });
+
+  it('searches labels only when asked, and does not care about case', async () => {
+    const tools = toolsFor(multi);
+    expect((await tools.search_tasks.execute({ query: 'BUG' })).tasks).toEqual([]);
+    const labels = await tools.search_tasks.execute({ query: 'BUG', fields: ['labels'] });
+    expect(labels.tasks.map((t: { id: string }) => t.id)).toEqual(['t1']);
+    expect(labels.tasks[0].matchedFields).toEqual(['labels']);
+  });
+
+  it('searches descriptions and needs every word (AND)', async () => {
+    const tools = toolsFor(multi);
+    expect((await tools.search_tasks.execute({ query: 'xxxx' })).tasks.map((t: { id: string }) => t.id)).toEqual([
+      't2',
+    ]);
+    expect((await tools.search_tasks.execute({ query: 'task xxxx' })).tasks.map((t: { id: string }) => t.id)).toEqual([
+      't2',
+    ]);
+    expect((await tools.search_tasks.execute({ query: 'task zzz' })).tasks).toEqual([]);
+  });
+
+  it('searches only what was loaded and reports partially loaded columns', async () => {
+    const out = await toolsFor(multi).search_tasks.execute({ query: 'Task' });
+    // Board A: t1, t2, t3 and only 2 of the 4 done tasks; board B: b-1, b-2.
+    expect(out.tasks.map((t: { id: string }) => t.id)).toEqual(['t1', 't2', 't3', 'd1', 'd2', 'b-1', 'b-2']);
+    expect(out.meta.complete).toBe(false);
+    expect(out.meta.incompleteCells).toEqual([
+      {
+        board: { id: 'b1', name: 'Test board' },
+        column: { id: 'c-done', name: 'Done' },
+        swimlane: { id: 's1', name: 'Team A' },
+        loadedTasks: 2,
+      },
+    ]);
+    expect(out.meta.howToComplete).toContain('loadAllPages');
+  });
+
+  it('loads a limited column completely when it is named', async () => {
+    const out = await toolsFor(multi).search_tasks.execute({ query: 'Task', columns: ['Done'] });
+    expect(out.tasks.map((t: { id: string }) => t.id)).toEqual(['d1', 'd2', 'd3', 'd4']);
+    expect(out.meta.complete).toBe(true);
+    expect(out.meta.incompleteCells).toEqual([]);
+  });
+
+  it('can restrict the search to a person', async () => {
+    const out = await toolsFor({ ...multi, KANBANFLOW_USER: 'ada@example.com' }).search_tasks.execute({
+      query: 'Task',
+      person: 'grace',
+    });
+    expect(out.tasks.map((t: { id: string }) => t.id)).toEqual(['t3']);
+    expect(out.person).toMatchObject({ resolved: 'grace', source: 'argument' });
+    expect(out.meta.boardsWherePersonIsNotMember).toEqual([{ id: 'b2', name: 'Other team' }]);
+  });
+
+  it('rejects a query with no words and needs a configured user for "me"', async () => {
+    await expect(toolsFor(multi).search_tasks.execute({ query: '   ' })).rejects.toThrow('at least one word');
+    await expect(
+      toolsFor({ KANBANFLOW_API_KEYS: 'token-a' }).search_tasks.execute({ query: 'x', person: 'me' })
+    ).rejects.toThrow('KANBANFLOW_USER');
+  });
+});

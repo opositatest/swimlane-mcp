@@ -44,6 +44,18 @@
       "description": "Lists the tasks of a person (you by default) on every configured board."
     },
     {
+      "name": "search_tasks",
+      "description": "Finds tasks whose name, description, labels or subtasks contain a text."
+    },
+    {
+      "name": "get_task",
+      "description": "Shows one task in full, including its description, people and comments."
+    },
+    {
+      "name": "list_comments",
+      "description": "Finds recent comments, including the ones that mention you."
+    },
+    {
       "name": "list_boards",
       "description": "Shows the configured boards: columns, colors and members."
     }

@@ -45,6 +45,16 @@ export class BoardContext {
     return index === -1 ? Number.MAX_SAFE_INTEGER : index;
   }
 
+  /** Column ids matching the given ids or exact names (case-insensitive). */
+  columnIds(wanted: string[]): Set<string> {
+    const lower = wanted.map((value) => value.toLowerCase());
+    return new Set(
+      this.board.columns
+        .filter((column) => wanted.includes(column.uniqueId) || lower.includes(column.name.toLowerCase()))
+        .map((column) => column.uniqueId)
+    );
+  }
+
   swimlane(id: string | undefined): Ref | undefined {
     if (!id) return undefined;
     const swimlane = this.board.swimlanes?.find((s) => s.uniqueId === id);

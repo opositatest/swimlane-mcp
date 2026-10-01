@@ -25,6 +25,9 @@ Built on [TanStack AI](https://tanstack.com/ai) (`@tanstack/ai` + `@tanstack/ai-
 |------|-----------------|
 | `list_boards` | The configured boards: columns (in order), swimlanes, colors with the team's names/descriptions, members, and on which boards "me" was found. |
 | `list_tasks` | The tasks of one person (default: "me") on every configured board, optionally only some boards or columns. Tasks come with board, column, swimlane, color, labels and people resolved to names, plus counts per board and column. |
+| `search_tasks` | Tasks whose text contains a query, across boards and columns (name, description, labels, custom fields or subtasks). Each task says which fields matched. KanbanFlow has no search endpoint, so it filters what it loads and reports partially loaded columns. |
+| `get_task` | One task in full — complete description, status, people, labels, color with the team's meaning, time tracking, subtasks and custom fields — plus its comments (author names and dates) to see mentions and discussion. |
+| `list_comments` | The most recent comments across the boards (newest first), with author, task and board resolved. Pass a person to get only the comments that mention them: KanbanFlow has no mention field, so it looks for the person's name inside the text. |
 
 A person can be given by email, full name, part of the name or user id. It is matched on each board separately; the response says how it matched (`matchedBy`), which boards the person is not on, and warns when a partial name matches several people.
 
@@ -168,7 +171,6 @@ npm run test:package # after build + bundle:extension: installed tarball and Des
 - `src/services/board-context.ts` — resolves ids to names and finds people; never assigns meaning
 - `src/tools/` — one file per tool (`toolDefinition().server()`)
 - `extension/` — Claude Desktop extension: `manifest.json` (form fields, Spanish translation in `mcpb-resources/`) and icon; `scripts/bundle-extension.mjs` bundles the server into one file with esbuild and packs the `.mcpb`
-- `drafts/` — single-board tools and prompts (task detail, activity log, standup…) pending adaptation to multi-board
 - `docs/kanbanflow-api.md` — our verified notes on how the KanbanFlow API behaves (pagination, events, rate limits)
 
 ## Publishing (maintainers)

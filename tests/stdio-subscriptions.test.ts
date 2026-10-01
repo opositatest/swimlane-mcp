@@ -39,7 +39,13 @@ describe('MCP 2026 subscriptions over stdio', () => {
     });
     const response = await client.waitFor((message) => message.id === listing);
     const tools = response.result?.tools as { name: string; annotations: { readOnlyHint: boolean } }[];
-    expect(tools.map((tool) => tool.name).sort()).toEqual(['list_boards', 'list_tasks']);
+    expect(tools.map((tool) => tool.name).sort()).toEqual([
+      'get_task',
+      'list_boards',
+      'list_comments',
+      'list_tasks',
+      'search_tasks',
+    ]);
     expect(tools.every((tool) => tool.annotations.readOnlyHint)).toBe(true);
     expect(client.messages.some((message) => message.id === subscription)).toBe(false);
 

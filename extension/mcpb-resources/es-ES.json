@@ -9,6 +9,18 @@
       "description": "Lista las tareas de una persona (tú, por defecto) en todos los tableros configurados."
     },
     {
+      "name": "search_tasks",
+      "description": "Busca tareas cuyo nombre, descripción, etiquetas o subtareas contengan un texto."
+    },
+    {
+      "name": "get_task",
+      "description": "Muestra una tarea completa, con su descripción, sus personas y sus comentarios."
+    },
+    {
+      "name": "list_comments",
+      "description": "Busca los comentarios recientes, incluidos aquellos en los que te mencionan."
+    },
+    {
       "name": "list_boards",
       "description": "Muestra los tableros configurados: columnas, colores y miembros."
     }

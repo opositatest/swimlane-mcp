@@ -47,6 +47,20 @@ export interface KanbanflowClient {
   getEvents(params: { from?: string; to?: string }): Promise<FetchedEvents>;
 }
 
+/**
+ * An HTTP failure from KanbanFlow, with the status code kept so callers can react to it
+ * (e.g. 404 means "this board does not have that task", used to locate a task across boards).
+ */
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    readonly status?: number
+  ) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
+
 /** Turns an HTTP failure into a message the model (and the user) can act on. */
 export function describeApiError(error: unknown): string {
   if (!(error instanceof AxiosError)) {
@@ -90,7 +104,9 @@ export function createKanbanflowClient(config: { apiKey: string; baseUrl: string
         const response = await http.get<T>(path, { params });
         return response.data;
       } catch (error) {
-        if (!isRetryable(error) || attempt >= MAX_RETRIES) throw new Error(describeApiError(error));
+        if (!isRetryable(error) || attempt >= MAX_RETRIES) {
+          throw new ApiError(describeApiError(error), error instanceof AxiosError ? error.response?.status : undefined);
+        }
         await delay(RETRY_DELAY_MS * (attempt + 1));
       }
     }

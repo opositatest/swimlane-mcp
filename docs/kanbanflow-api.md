@@ -55,3 +55,9 @@ Fields are omitted when empty (a task without labels has no `labels` key). `colo
 - Next page: repeat with `from` = timestamp of the last event and skip `_id`s already seen.
 - Event types seen: `taskCreated`, `taskChanged`, `taskCommentCreated`, `taskAttachmentCreated`, `taskCustomFieldChanged`, `taskRelationCreated`, `taskRelationDeleted`.
 - `changedProperties` seen: `columnId`, `swimlaneId`, `boardId` (task moved from another board), `sortOrder` (almost every drag), `color`, `labels`, `members`, `description`, `subTasks`, `dates`, `groupingDate`, `totalSecondsSpent`, `hasComments`, `hasRelations`, `hasAttachments`.
+- On the boards we tested, a `taskCommentCreated` detail carries `taskId` but **not** the comment: the text still has to be read with `GET /tasks/{id}/comments`. (The webhook payloads documented in the API docs are richer — they include `taskComment`, `taskName` and `userFullName` — but we have not seen those fields on `GET /board/events`.)
+
+## Comments and mentions
+
+- `GET /tasks/{id}/comments` returns `text`, `authorUserId` and `createdTimestamp`; there is **no mention field**: a mention is the person's name inside `text`, so finding mentions is a text search (case-insensitive) over the comment text.
+- The webhook docs also list `taskCommentChanged` and `taskCommentDeleted`; we have only seen `taskCommentCreated` on `GET /board/events`.

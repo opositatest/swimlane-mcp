@@ -32,7 +32,13 @@ describe.each(['2025-06-18', '2025-11-25'])('MCP %s over stdio', (protocolVersio
   it('exposes the tools as read-only', async () => {
     const response = await client.request('tools/list');
     const tools = response.result?.tools as { name: string; annotations?: { readOnlyHint?: boolean } }[];
-    expect(tools.map((tool) => tool.name).sort()).toEqual(['list_boards', 'list_tasks']);
+    expect(tools.map((tool) => tool.name).sort()).toEqual([
+      'get_task',
+      'list_boards',
+      'list_comments',
+      'list_tasks',
+      'search_tasks',
+    ]);
     for (const tool of tools) expect(tool.annotations?.readOnlyHint).toBe(true);
   });
 
@@ -41,6 +47,17 @@ describe.each(['2025-06-18', '2025-11-25'])('MCP %s over stdio', (protocolVersio
     expect(response.result?.isError).toBeFalsy();
     const content = response.result?.structuredContent as { tasks: { id: string; board: { name: string } }[] };
     expect(content.tasks.map((task) => `${task.board.name}/${task.id}`)).toEqual(['Test board/t1', 'Other team/b-1']);
+  });
+
+  it('returns one task with its comments as structured JSON', async () => {
+    const response = await client.request('tools/call', { name: 'get_task', arguments: { taskId: 't1' } });
+    expect(response.result?.isError).toBeFalsy();
+    const content = response.result?.structuredContent as {
+      task: { id: string; board: { name: string } };
+      comments: { text: string }[];
+    };
+    expect(`${content.task.board.name}/${content.task.id}`).toBe('Test board/t1');
+    expect(content.comments.map((comment) => comment.text)).toEqual(['Looks good']);
   });
 
   it('answers ping during a legacy session', async () => {

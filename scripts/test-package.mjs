@@ -43,7 +43,13 @@ async function check(target, protocol) {
       client.notify('notifications/initialized');
     }
     const listing = await client.request('tools/list', params());
-    assert.deepEqual(listing.result?.tools.map((tool) => tool.name).sort(), ['list_boards', 'list_tasks']);
+    assert.deepEqual(listing.result?.tools.map((tool) => tool.name).sort(), [
+      'get_task',
+      'list_boards',
+      'list_comments',
+      'list_tasks',
+      'search_tasks',
+    ]);
     assert.ok(listing.result.tools.every((tool) => tool.annotations?.readOnlyHint));
     if (modern) await client.waitFor((message) => message.method === 'notifications/subscriptions/acknowledged');
     const response = await client.request('tools/call', params({ name: 'list_tasks', arguments: {} }));

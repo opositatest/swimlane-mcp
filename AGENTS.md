@@ -39,7 +39,6 @@ npm run test:package   # after both builds: actual tarball + Desktop entry point
 - `src/services/board-context.ts` — `BoardContext` (one board): id → name for columns, swimlanes, users, colors; `findPeople`.
 - `src/tools/*.ts` — one factory per tool, `create<Name>Tool(deps)`; `tools.ts` lists them; `task-view.ts` is the shared task shape.
 - `extension/` — Claude Desktop extension (MCPB manifest v0.4): `manifest.json` (form = `user_config`, mapped to `KANBANFLOW_*` env vars), `mcpb-resources/es-ES.json` (translations; `user_config` titles cannot be translated), `icon.png`. `scripts/bundle-extension.mjs` bundles `src/main.ts` into one file with esbuild (no node_modules shipped) and runs `mcpb validate` + `mcpb pack`. Claude Desktop runs it with its built-in Node (24.x in Claude 2.16 / Electron 44).
-- `drafts/` — single-board tools/prompts not compiled; adapt to `BoardSet` before moving back (see `drafts/README.md`).
 - `tests/fake-api.ts` — local HTTP fake with the real response shapes; serves a different board per token (`token-a`, `token-b`, `token-bad` → 401).
 
 ## Adding a tool

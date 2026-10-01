@@ -66,22 +66,51 @@ export const tasksB = [
   task('b-2', 'x-todo', { swimlaneId: undefined, collaborators: [{ userId: 'u8' }] }),
 ];
 
-export const events = Array.from({ length: 5 }, (_, i) => ({
-  _id: `e${i}`,
-  userId: 'u1',
-  timestamp: `2026-09-28T10:0${i}:00.000Z`,
-  detailedEvents: [
-    {
-      eventType: 'taskChanged',
-      taskId: 't1',
-      changedProperties: [
-        { property: 'columnId', oldValue: 'c-todo', newValue: 'c-doing' },
-        { property: 'sortOrder', oldValue: 1, newValue: 2 },
-        { property: 'description', oldValue: 'long old text', newValue: 'long new text' },
-      ],
-    },
-  ],
-}));
+export const events = [
+  ...Array.from({ length: 5 }, (_, i) => ({
+    _id: `e${i}`,
+    userId: 'u1',
+    timestamp: `2026-09-28T10:0${i}:00.000Z`,
+    detailedEvents: [
+      {
+        eventType: 'taskChanged',
+        taskId: 't1',
+        changedProperties: [
+          { property: 'columnId', oldValue: 'c-todo', newValue: 'c-doing' },
+          { property: 'sortOrder', oldValue: 1, newValue: 2 },
+          { property: 'description', oldValue: 'long old text', newValue: 'long new text' },
+        ],
+      },
+    ],
+  })),
+  {
+    _id: 'e5',
+    userId: 'u2',
+    timestamp: '2026-09-28T10:05:00.000Z',
+    detailedEvents: [{ eventType: 'taskCommentCreated', taskId: 't1' }],
+  },
+  {
+    _id: 'e6',
+    userId: 'u1',
+    timestamp: '2026-09-28T10:06:00.000Z',
+    detailedEvents: [{ eventType: 'taskCommentCreated', taskId: 't2' }],
+  },
+];
+
+const eventsB = [
+  {
+    _id: 'eb0',
+    userId: 'u8',
+    timestamp: '2026-09-28T11:00:00.000Z',
+    detailedEvents: [{ eventType: 'taskCommentCreated', taskId: 'b-1' }],
+  },
+  {
+    _id: 'eb1',
+    userId: 'u9',
+    timestamp: '2026-09-28T11:05:00.000Z',
+    detailedEvents: [{ eventType: 'taskCommentCreated', taskId: 'b-2' }],
+  },
+];
 const EVENTS_PAGE = 2;
 
 export interface FakeApi {
@@ -108,6 +137,29 @@ export async function startFakeApi(): Promise<FakeApi> {
       if (url.pathname === '/board') return send(200, boardB);
       if (url.pathname === '/users') return send(200, usersB);
       if (url.pathname === '/tasks') return send(200, [{ columnId: 'x-todo', tasks: tasksB, tasksLimited: false }]);
+      if (url.pathname === '/tasks/b-1') return send(200, tasksB[0]);
+      if (url.pathname === '/tasks/b-2') return send(200, tasksB[1]);
+      if (url.pathname === '/tasks/b-1/comments') {
+        return send(200, [
+          {
+            _id: 'kb1',
+            text: '@Ada can you review this?',
+            authorUserId: 'u8',
+            createdTimestamp: '2026-09-28T11:00:00Z',
+          },
+        ]);
+      }
+      if (url.pathname === '/tasks/b-2/comments') {
+        return send(200, [
+          { _id: 'kb2', text: 'Deployed to production', authorUserId: 'u9', createdTimestamp: '2026-09-28T11:05:00Z' },
+        ]);
+      }
+      if (url.pathname === '/board/events') {
+        const from = q.get('from') ?? '';
+        const page = eventsB.filter((e) => e.timestamp >= from).slice(0, EVENTS_PAGE);
+        const more = eventsB.filter((e) => e.timestamp >= from).length > EVENTS_PAGE;
+        return send(200, { eventsLimited: more, events: page });
+      }
       return send(404, { errors: [{ message: 'Resource not found' }] });
     }
 
@@ -135,9 +187,21 @@ export async function startFakeApi(): Promise<FakeApi> {
       ]);
     }
     if (url.pathname === '/tasks/t1') return send(200, todoTasks[0]);
+    if (url.pathname === '/tasks/t2') return send(200, todoTasks[1]);
     if (url.pathname === '/tasks/t1/comments') {
       return send(200, [
         { _id: 'k1', text: 'Looks good', authorUserId: 'u2', createdTimestamp: '2026-09-28T09:00:00Z' },
+      ]);
+    }
+    if (url.pathname === '/tasks/t2/comments') {
+      return send(200, [
+        {
+          _id: 'k2',
+          text: '@Ada Lovelace please check the copy',
+          authorUserId: 'u2',
+          createdTimestamp: '2026-09-28T10:06:00Z',
+        },
+        { _id: 'k3', text: 'Moving this along', authorUserId: 'u1', createdTimestamp: '2026-09-20T08:00:00Z' },
       ]);
     }
     if (url.pathname === '/board/events') {
