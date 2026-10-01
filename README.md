@@ -51,6 +51,8 @@ See [TOOLS.md](./TOOLS.md) for parameters and output format.
 
 Claude Desktop runs it with its own Node.js, so nothing else has to be installed, and the token is stored encrypted by the operating system.
 
+The extension declares **macOS, Windows and Linux (including Ubuntu)** compatibility starting with **0.0.3**. On Linux, use a client that supports `.mcpb` and provides Node.js 24+, or install Node and use the npm/stdio setup below. This does not add Linux support to a client that lacks it.
+
 📘 Step-by-step guide in Spanish, with troubleshooting: [docs/instalar-en-claude-desktop.md](./docs/instalar-en-claude-desktop.md).
 
 ### Other clients (npx)
