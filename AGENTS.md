@@ -20,7 +20,7 @@ npm run test:package   # after both builds: actual tarball + Desktop entry point
 - **Multi-board.** One KanbanFlow token = one board. Config takes several tokens (`KANBANFLOW_API_KEYS`); every tool works across all of them via `BoardSet`. Never assume a single board, and never print tokens (refer to them by position).
 - **People are matched per board** (`BoardContext.findPeople`): user ids can differ between boards; email is the stable key. Always report `matchedBy` and ambiguous matches.
 - **TanStack AI.** Tools are `toolDefinition().server()` from `@tanstack/ai`; the server is `createMCPServer` from `@tanstack/ai-mcp/server`, served with `serveMCPStdio`. Do NOT import `@modelcontextprotocol/sdk`.
-- **stdout is the protocol channel.** Never `console.log` (Biome `noConsoleLog` is an error). Log with `console.error`.
+- **stdout is the protocol channel.** Never `console.log` (Biome `noConsole` is an error, only `console.error`/`console.warn` are allowed). Log with `console.error`.
 - **Invalid configuration never exits the process**: the server starts and every tool answers with the problem and where to fix it (`BoardSet.unconfigured`, `assertConfigured`). Tools must call `deps.boards.assertConfigured()` (or `load()`) before any other check.
 - **Errors:** throw an `Error` with an actionable message; TanStack turns it into an MCP `isError` result. `kanbanflow-client.ts` already converts HTTP failures (`describeApiError`).
 - **Node 24+** (`engines`, `.node-version`; CI tests 24 and 26). ES modules, `.js` extensions in imports, TypeScript strict, Node16 resolution, target ES2024, Zod v4.

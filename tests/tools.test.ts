@@ -49,8 +49,10 @@ describe('config', () => {
   });
 
   it('treats optional fields a client left unsubstituted as not set', () => {
+    // biome-ignore lint/suspicious/noTemplateCurlyInString: this is the literal placeholder a client sends when a field is unset
     const config = loadConfig({ KANBANFLOW_API_KEYS: 'tok1', KANBANFLOW_USER: '${user_config.kanbanflow_user}' });
     expect(config.user).toBeUndefined();
+    // biome-ignore lint/suspicious/noTemplateCurlyInString: this is the literal placeholder a client sends when a field is unset
     expect(() => loadConfig({ KANBANFLOW_API_KEYS: '${user_config.kanbanflow_api_keys}' })).toThrow(
       'No KanbanFlow API token is configured'
     );

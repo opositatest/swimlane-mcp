@@ -1,4 +1,4 @@
-import { type BoardContext, TASK_URL, secondsToHours } from '../services/board-context.js';
+import { type BoardContext, secondsToHours, TASK_URL } from '../services/board-context.js';
 import type { ApiTask } from '../types.js';
 
 const DESCRIPTION_PREVIEW_CHARS = 150;
