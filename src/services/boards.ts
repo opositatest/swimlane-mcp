@@ -1,6 +1,6 @@
 import type { Config } from '../config.js';
 import { BoardContext } from './board-context.js';
-import { type KanbanflowClient, createKanbanflowClient } from './kanbanflow-client.js';
+import { createKanbanflowClient, type KanbanflowClient } from './kanbanflow-client.js';
 
 export interface LoadedBoard {
   ctx: BoardContext;

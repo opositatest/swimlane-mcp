@@ -1,11 +1,21 @@
 {
-  "$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
-  "organizeImports": {
-    "enabled": true
-  },
+  "$schema": "https://biomejs.dev/schemas/2.5.14/schema.json",
+  "assist": { "actions": { "source": { "organizeImports": "on" } } },
   "files": {
-    "include": ["**/*.ts", "**/*.js", "**/*.mts", "**/*.mjs", "**/*.json"],
-    "ignore": ["build/**", "dist/**", "dist-extension/**", "drafts/**", "node_modules/**", "coverage/**", "*.d.ts"]
+    "includes": [
+      "**/*.ts",
+      "**/*.js",
+      "**/*.mts",
+      "**/*.mjs",
+      "**/*.json",
+      "!**/build",
+      "!**/dist",
+      "!**/dist-extension",
+      "!**/drafts",
+      "!**/node_modules",
+      "!**/coverage",
+      "!**/*.d.ts"
+    ]
   },
   "formatter": {
     "enabled": true,
@@ -15,12 +25,12 @@
     "lineEnding": "lf",
     "lineWidth": 120,
     "attributePosition": "auto",
-    "ignore": ["package.json", "package-lock.json"]
+    "includes": ["**", "!**/package.json", "!**/package-lock.json"]
   },
   "linter": {
     "enabled": true,
     "rules": {
-      "recommended": true,
+      "preset": "recommended",
       "complexity": {
         "noUselessUndefinedInitialization": "error",
         "useDateNow": "error",
@@ -34,17 +44,17 @@
         "noUnusedVariables": "error"
       },
       "style": {
-        "noVar": "error",
         "useConst": "error",
         "useExportType": "error",
         "useImportType": "error",
-        "useShorthandArrayType": "error",
-        "useTemplate": "error"
+        "useTemplate": "error",
+        "useConsistentArrayType": { "level": "error", "options": { "syntax": "shorthand" } }
       },
       "suspicious": {
-        "noConsoleLog": "error",
         "noDebugger": "error",
-        "noExplicitAny": "warn"
+        "noExplicitAny": "warn",
+        "noVar": "error",
+        "noConsole": { "level": "error", "options": { "allow": ["error", "warn"] } }
       },
       "performance": {
         "noAccumulatingSpread": "warn"

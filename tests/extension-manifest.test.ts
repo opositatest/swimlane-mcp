@@ -12,6 +12,7 @@ describe('MCPB platform compatibility', () => {
     expect(manifest.server.type).toBe('node');
     expect(manifest.server.entry_point).toBe('server/main.js');
     expect(manifest.server.mcp_config.command).toBe('node');
+    // biome-ignore lint/suspicious/noTemplateCurlyInString: the manifest must carry this literal placeholder
     expect(manifest.server.mcp_config.args).toEqual(['${__dirname}/server/main.js']);
     expect(manifest.compatibility.runtimes.node).toBe('>=24.0.0');
   });

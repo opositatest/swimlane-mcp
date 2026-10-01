@@ -1,4 +1,4 @@
-import { type Server, createServer } from 'node:http';
+import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import type { ApiTask } from '../src/types.js';
 

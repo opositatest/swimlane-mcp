@@ -4,7 +4,10 @@ export const DEFAULT_BASE_URL = 'https://kanbanflow.com/api/v1';
 
 // A value a client left unset: empty, or a placeholder it did not substitute
 // (e.g. Claude Desktop extensions pass `${user_config.x}` for an empty optional field).
-const isUnset = (value: string | undefined) => !value || !value.trim() || /^\$\{[^}]*\}$/.test(value.trim());
+const isUnset = (value: string | undefined) => {
+  const trimmed = value?.trim();
+  return !trimmed || /^\$\{[^}]*\}$/.test(trimmed);
+};
 
 const optionalText = z
   .string()
