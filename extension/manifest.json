@@ -56,6 +56,10 @@
       "description": "Finds recent comments, including the ones that mention you."
     },
     {
+      "name": "list_time_entries",
+      "description": "Shows the tracked time of a period: who worked, when and on which task."
+    },
+    {
       "name": "list_boards",
       "description": "Shows the configured boards: columns, colors and members."
     }

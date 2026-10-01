@@ -94,3 +94,30 @@ Returns:
 - `comments`: `[{ id, createdAt, author: Ref | null, board: Ref, task (summary shape, or `{id, name: null, url}` if it could not be read), text }]`, newest first. Text is verbatim.
 
 How it works and its limits: comments are found through the board activity log (`GET /board/events`, `taskCommentCreated`), so only tasks commented inside the window are looked at; the comments of those tasks are then read one request each. The activity log pages oldest-first and the client reads at most 1000 events, so on a very busy window `meta.events.complete` is `false` and the newest comments may be missing — narrow `from`/`to`. A board with years of history cannot be searched for an arbitrary old mention this way: use a window that covers it.
+
+## `list_time_entries`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `from` / `to` | string | Window, ISO 8601 UTC. Default: the last 2 days ending now (covers a local "today" in any time zone). The server does **not** decide what "today" is: pass the window the user means (for a local day, its UTC equivalent). |
+| `person` | string | Only entries tracked by this person (id, email, full name or part of the name); `"me"` uses `KANBANFLOW_USER`. Omit it for everybody. |
+| `boards` | string[] | Board ids or exact names. Default: every configured board. |
+| `taskIds` | string[] | Read only these tasks (ids from `list_tasks`, `search_tasks`, `get_task`) instead of scanning the activity log. Cheaper and exact, and the only way to reach entries older than the log keeps. |
+| `limit` | number | Entries returned, newest first. Default 100, max 500. Totals always cover every match. |
+| `maxTasks` | number | Tasks whose entries are read, most recently changed first. Default 50, max 100; one API request each. |
+
+Returns:
+
+- `person`: `null` without a `person` filter, otherwise the same shape as `list_comments`, plus a note that an entry is attributed by the `userId` KanbanFlow stores on it.
+- `meta`:
+  - `range` (`from`, `to`, whether each was defaulted, and `windowRule`), `filters`
+  - `warnings`, `boardsSearched`, `boardsWherePersonIsNotMember`, `failedBoards`
+  - `events` (`{ loaded, complete, timeChanges }`, or `null` with `taskIds`) and `howEntriesAreFound`
+  - `tasksWithTimeChanges`, `tasksScanned`, `tasksTruncatedByMaxTasks`, `howToComplete` (when tasks were capped, with how to read the rest), `tasksWithoutName`, `tasksWithErrors`, `taskIndexIncompleteBoards`
+  - `entriesMatched`, `entriesReturned`, `truncatedByLimit`, `limitNote` (how many matching entries the list left out), `entriesOutsideWindow`, `entriesWithoutDate`, `entriesWithoutEnd`, `entriesWithoutDuration`, `entriesWithoutUser`
+  - `whereEntrySumDiffers` — `[{ board, taskId, entriesSeconds, taskTotalSeconds }]` for tasks where the sum of their entries does not match their accumulated total (a sign that something was not returned)
+  - `apiRequests`, `totalsNote`, `note`
+- `totals`: `{ entries, seconds, hours, byPerson (board + person), byDay (UTC date), byBoard }` over **every** match, not only the returned ones. These are sums of entry durations: two people overlapping on the same task add up twice, so they are not elapsed time.
+- `entries`: `[{ id, partIndex?, type, board, task, person, start, end, seconds, hours }]`, newest first. `task` is `{ id, name, url, column, swimlane }`; `name` is `null` when the task was not in the (possibly paginated) task list of its board. `end`, `seconds` and `hours` are `null` while a stopwatch is still running. `id` is `entryId`, the id of the stopwatch session or manual entry: a session can be split in parts (`partIndex`) and its parts can even land on different tasks, so `id` alone does not identify a row; `id` + `partIndex` + `task.id` does.
+
+How it works and its limits: `GET /tasks/{id}/time-entries` is the only time endpoint that exists (the board-level `/timeentries` of the documentation answers 404) and it ignores query parameters, so every entry of a task is returned in one request; the window is applied here. Entries are attributed to whoever KanbanFlow recorded on them, which can be an integration id that is not a board member (returned without a name). Without `taskIds`, the tasks of the window come from the activity log entries that changed `totalSecondsSpent`: the log is read oldest-first and, on a busy board, that budget (25 pages, 2500 events per board) can run out before the newest events, which `meta.events.complete` reports. A task whose time changed with no such event would not appear either; `taskIds` avoids both problems.

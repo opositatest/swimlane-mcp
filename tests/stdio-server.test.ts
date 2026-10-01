@@ -37,6 +37,7 @@ describe.each(['2025-06-18', '2025-11-25'])('MCP %s over stdio', (protocolVersio
       'list_boards',
       'list_comments',
       'list_tasks',
+      'list_time_entries',
       'search_tasks',
     ]);
     for (const tool of tools) expect(tool.annotations?.readOnlyHint).toBe(true);

@@ -3,6 +3,7 @@ import { createGetTaskTool } from './get-task.js';
 import { createListBoardsTool } from './list-boards.js';
 import { createListCommentsTool } from './list-comments.js';
 import { createListTasksTool } from './list-tasks.js';
+import { createListTimeEntriesTool } from './list-time-entries.js';
 import { createSearchTasksTool } from './search-tasks.js';
 
 // Lista de todas las herramientas disponibles (todas de solo lectura).
@@ -12,6 +13,7 @@ export function createTools(deps: ToolDeps) {
     createListTasksTool(deps),
     createGetTaskTool(deps),
     createListCommentsTool(deps),
+    createListTimeEntriesTool(deps),
     createSearchTasksTool(deps),
   ];
 }

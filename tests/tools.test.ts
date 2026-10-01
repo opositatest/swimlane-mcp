@@ -273,6 +273,149 @@ describe('list_comments', () => {
   });
 });
 
+describe('list_time_entries', () => {
+  const multi = { KANBANFLOW_API_KEYS: 'token-a,token-b', KANBANFLOW_USER: 'ada@example.com' };
+  const day = { from: '2026-09-28T00:00:00Z', to: '2026-09-29T00:00:00Z' };
+
+  it('breaks the time of the window down by entry, person and day', async () => {
+    const out = await toolsFor(multi).list_time_entries.execute({ ...day });
+
+    // Candidates come from the activity log (`totalSecondsSpent` changes): b-1 (11:50), t3 (10:07), t1 (10:04).
+    expect(out.entries.map((entry: { id: string }) => entry.id)).toEqual(['te2', 'teb2', 'teb1', 'te1', 'te1', 'te4']);
+    expect(out.entries[0]).toMatchObject({
+      type: 'manual',
+      board: { id: 'b1', name: 'Test board' },
+      task: { id: 't1', name: 'Task t1', column: { name: 'Backlog' }, swimlane: { name: 'Team A' } },
+      person: { id: 'u2', name: 'Grace Hopper' },
+      start: '2026-09-28T12:00:00Z',
+      end: '2026-09-28T13:30:00Z',
+      seconds: 5400,
+      hours: 1.5,
+    });
+    // A stopwatch split in parts: two rows sharing `entryId`, each with its own partIndex.
+    expect(
+      out.entries
+        .filter((entry: { id: string }) => entry.id === 'te1')
+        .map((entry: { partIndex: number }) => entry.partIndex)
+    ).toEqual([1, 0]);
+    // The running stopwatch has no end: it is returned, counted, and not given a duration.
+    expect(out.entries.at(-1)).toMatchObject({
+      id: 'te4',
+      end: null,
+      seconds: null,
+      hours: null,
+      person: { name: 'Grace Hopper' },
+    });
+
+    expect(out.person).toBeNull();
+    expect(out.totals).toMatchObject({ entries: 6, seconds: 15300, hours: 4.25 });
+    expect(out.totals.byDay).toEqual([{ date: '2026-09-28', entries: 6, seconds: 15300, hours: 4.25 }]);
+    expect(out.totals.byBoard).toEqual([
+      { board: { id: 'b1', name: 'Test board' }, entries: 4, seconds: 10800, hours: 3 },
+      { board: { id: 'b2', name: 'Other team' }, entries: 2, seconds: 4500, hours: 1.25 },
+    ]);
+    expect(out.totals.byPerson).toEqual([
+      {
+        board: { id: 'b1', name: 'Test board' },
+        person: { id: 'u1', name: 'Ada Lovelace' },
+        entries: 2,
+        seconds: 5400,
+        hours: 1.5,
+      },
+      {
+        board: { id: 'b1', name: 'Test board' },
+        person: { id: 'u2', name: 'Grace Hopper' },
+        entries: 2,
+        seconds: 5400,
+        hours: 1.5,
+      },
+      {
+        board: { id: 'b2', name: 'Other team' },
+        person: { id: 'u9', name: 'Ada Lovelace' },
+        entries: 1,
+        seconds: 2700,
+        hours: 0.75,
+      },
+      {
+        board: { id: 'b2', name: 'Other team' },
+        person: {
+          id: '825d35a91fa62346f8a4ad4a7210e3a9',
+          name: '(user not on this board: 825d35a91fa62346f8a4ad4a7210e3a9)',
+        },
+        entries: 1,
+        seconds: 1800,
+        hours: 0.5,
+      },
+    ]);
+
+    expect(out.meta.events).toEqual({ loaded: 11, complete: true, timeChanges: 3 });
+    expect(out.meta.tasksWithTimeChanges).toBe(3);
+    expect(out.meta.tasksScanned).toBe(3);
+    expect(out.meta.entriesMatched).toBe(6);
+    expect(out.meta.entriesOutsideWindow).toBe(1);
+    expect(out.meta.entriesWithoutEnd).toBe(1);
+    expect(out.meta.whereEntrySumDiffers).toEqual([]);
+    expect(out.meta.range.windowRule).toContain('startTimestamp');
+    expect(out.meta.apiRequests).toBe(18);
+  });
+
+  it('filters by person per board, where the same person has different user ids', async () => {
+    const out = await toolsFor(multi).list_time_entries.execute({ person: 'me', ...day });
+    expect(out.entries.map((entry: { id: string }) => entry.id)).toEqual(['teb1', 'te1', 'te1']);
+    expect(out.totals.seconds).toBe(8100);
+    expect(out.person).toMatchObject({
+      resolved: 'ada@example.com',
+      source: 'me (KANBANFLOW_USER)',
+      matches: [
+        { board: { id: 'b1' }, users: [{ id: 'u1', name: 'Ada Lovelace' }], matchedBy: 'email' },
+        { board: { id: 'b2' }, users: [{ id: 'u9', name: 'Ada Lovelace' }], matchedBy: 'email' },
+      ],
+    });
+    expect(out.meta.boardsWherePersonIsNotMember).toEqual([]);
+  });
+
+  it('reads explicit tasks without touching the activity log, and reports ids it could not read', async () => {
+    const out = await toolsFor(multi).list_time_entries.execute({ taskIds: ['t1', 't2', 'ghost'], ...day });
+    expect(api.requests.some((request) => request.includes('/board/events'))).toBe(false);
+    expect(out.entries.map((entry: { id: string }) => entry.id)).toEqual(['te2', 'te1', 'te1', 'te5']);
+    expect(out.meta.events).toBeNull();
+    expect(out.meta.entriesWithoutUser).toBe(1);
+    expect(out.entries.at(-1)).toMatchObject({ id: 'te5', person: null, seconds: 1800 });
+    expect(out.meta.tasksWithErrors).toEqual([{ taskId: 'ghost', error: expect.stringContaining('HTTP 404') }]);
+    expect(out.meta.tasksWithoutName).toEqual(['ghost']);
+  });
+
+  it('says what it left out: window, limit and task cap', async () => {
+    const tools = toolsFor(multi);
+    const capped = await tools.list_time_entries.execute({ maxTasks: 1, ...day });
+    expect(capped.meta.tasksWithTimeChanges).toBe(3);
+    expect(capped.meta.tasksTruncatedByMaxTasks).toBe(true);
+    expect(capped.meta.howToComplete).toContain('maxTasks');
+    expect(capped.meta.howEntriesAreFound).toContain('taskIds');
+
+    const limited = await tools.list_time_entries.execute({ limit: 1, ...day });
+    expect(limited.entries).toHaveLength(1);
+    expect(limited.meta.truncatedByLimit).toBe(true);
+    expect(limited.meta.limitNote).toContain('taskIds');
+    expect(limited.meta.entriesMatched).toBe(6);
+
+    const defaulted = await tools.list_time_entries.execute({});
+    expect(defaulted.meta.range.fromDefaulted).toBe(true);
+    expect(defaulted.meta.range.toDefaulted).toBe(true);
+  });
+
+  it('rejects an unusable window and needs a configured user for "me"', async () => {
+    const tools = toolsFor(multi);
+    await expect(tools.list_time_entries.execute({ from: 'yesterday' })).rejects.toThrow('ISO 8601');
+    await expect(
+      tools.list_time_entries.execute({ from: '2026-09-29T00:00:00Z', to: '2026-09-28T00:00:00Z' })
+    ).rejects.toThrow('is after "to"');
+    await expect(
+      toolsFor({ KANBANFLOW_API_KEYS: 'token-a' }).list_time_entries.execute({ person: 'me' })
+    ).rejects.toThrow('KANBANFLOW_USER');
+  });
+});
+
 describe('search_tasks', () => {
   const multi = { KANBANFLOW_API_KEYS: 'token-a,token-b' };
 

@@ -1,5 +1,14 @@
 import axios, { AxiosError } from 'axios';
-import type { ApiBoard, ApiComment, ApiEvent, ApiEventPage, ApiTask, ApiTaskCell, ApiUser } from '../types.js';
+import type {
+  ApiBoard,
+  ApiComment,
+  ApiEvent,
+  ApiEventPage,
+  ApiTask,
+  ApiTaskCell,
+  ApiTimeEntry,
+  ApiUser,
+} from '../types.js';
 
 const REQUEST_TIMEOUT_MS = 15_000;
 const MAX_RETRIES = 2;
@@ -44,7 +53,13 @@ export interface KanbanflowClient {
   getAllTasks(options?: GetAllTasksOptions): Promise<FetchedTasks>;
   getTask(taskId: string): Promise<ApiTask>;
   getTaskComments(taskId: string): Promise<ApiComment[]>;
-  getEvents(params: { from?: string; to?: string }): Promise<FetchedEvents>;
+  /**
+   * Every time entry of one task: `{ entryId, type, userId, taskId, startTimestamp, endTimestamp, partIndex? }`.
+   * Verified against a real board: query parameters are ignored (no pagination) and the sum of the entry
+   * durations equals the task's `totalSecondsSpent`.
+   */
+  getTaskTimeEntries(taskId: string): Promise<ApiTimeEntry[]>;
+  getEvents(params: { from?: string; to?: string; maxPages?: number }): Promise<FetchedEvents>;
 }
 
 /**
@@ -145,15 +160,17 @@ export function createKanbanflowClient(config: { apiKey: string; baseUrl: string
     getUsers: () => get<ApiUser[]>('users'),
     getTask: (taskId) => get<ApiTask>(`tasks/${encodeURIComponent(taskId)}`),
     getTaskComments: (taskId) => get<ApiComment[]>(`tasks/${encodeURIComponent(taskId)}/comments`),
+    // Hyphenated path: `/tasks/{id}/timeentries` and the board-level `/timeentries` answer 404.
+    getTaskTimeEntries: (taskId) => get<ApiTimeEntry[]>(`tasks/${encodeURIComponent(taskId)}/time-entries`),
     // `board/events` returns at most 100 events, oldest first, plus `eventsLimited`.
     // The next page starts at the last timestamp; events already seen are skipped.
-    async getEvents({ from, to }) {
+    async getEvents({ from, to, maxPages = MAX_EVENT_PAGES }) {
       const events: ApiEvent[] = [];
       const seen = new Set<string>();
       let cursor = from;
       let limited = true;
       let requests = 0;
-      while (limited && requests < MAX_EVENT_PAGES) {
+      while (limited && requests < maxPages) {
         const params: Record<string, string> = {};
         if (cursor) params.from = cursor;
         if (to) params.to = to;

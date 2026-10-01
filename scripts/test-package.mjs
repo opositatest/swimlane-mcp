@@ -48,6 +48,7 @@ async function check(target, protocol) {
       'list_boards',
       'list_comments',
       'list_tasks',
+      'list_time_entries',
       'search_tasks',
     ]);
     assert.ok(listing.result.tools.every((tool) => tool.annotations?.readOnlyHint));

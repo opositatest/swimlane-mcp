@@ -49,6 +49,20 @@ export interface ApiBoard {
   [key: string]: unknown;
 }
 
+export interface ApiTimeEntry {
+  entryId: string;
+  /** "stopwatch" or "manual" on the boards we tested. */
+  type?: string;
+  userId?: string;
+  taskId?: string;
+  startTimestamp?: string;
+  /** Absent while the stopwatch is still running. */
+  endTimestamp?: string;
+  /** A stopwatch entry can be split in several rows sharing `entryId` (one per part). */
+  partIndex?: number;
+  [key: string]: unknown;
+}
+
 export interface ApiComment {
   _id: string;
   text: string;
