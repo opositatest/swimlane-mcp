@@ -1,6 +1,6 @@
 {
   "name": "@opositatest/swimlane-mcp",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Unofficial read-only MCP server for KanbanFlow: list a person's tasks across all your boards from any MCP client. Not affiliated with KanbanFlow.",
   "keywords": [
     "mcp",
