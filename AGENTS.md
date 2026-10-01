@@ -7,8 +7,9 @@ npm run dev            # MCP Inspector (for testing)
 npm run typecheck      # tsc --noEmit (src + tests)
 npm run lint:check     # lint + format + imports (CI equivalent)
 npm test               # vitest suite (fake local API, no real API calls)
-npm run build          # TypeScript → build/
+npm run build          # TypeScript modules + patched, bundled CLI → build/
 npm run bundle:extension  # Claude Desktop extension → dist-extension/*.mcpb
+npm run test:package   # after both builds: actual tarball + Desktop entry point
 ```
 
 ## Critical Facts
@@ -29,6 +30,7 @@ npm run bundle:extension  # Claude Desktop extension → dist-extension/*.mcpb
 
 - `src/main.ts` — CLI entry (`bin`): `loadConfig()` then `serveMCPStdio(createServer(config))`.
 - `src/server.ts` — `createServer(config, boards?)`; a `BoardSet` can be injected in tests.
+- `scripts/stdio-compat.mjs` — checksum-guarded build-time correction for TanStack 0.6.0's stdio streaming/subscription handling. Both `scripts/bundle-server.mjs` (npm CLI) and the Desktop bundle use it. Keep `@tanstack/ai-mcp` pinned until the upstream fix is verified. Transport tests must run the bundled entry point, not raw `src/main.ts`; see `docs/stdio-compat.md`.
 - `src/services/boards.ts` — `BoardSet` (one client per token, `load()` with per-token failures) and `selectBoards`.
 - `src/config.ts` — env vars validated with Zod: `KANBANFLOW_API_KEY` / `KANBANFLOW_API_KEYS` (at least one), `KANBANFLOW_USER` (alias `KANBANFLOW_USER_ID`), `KANBANFLOW_BASE_URL`.
 - `src/services/kanbanflow-client.ts` — HTTP (axios), retries, pagination:

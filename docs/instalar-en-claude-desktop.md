@@ -2,11 +2,11 @@
 
 Con Swimlane puedes preguntarle a Claude por tus tareas de KanbanFlow, o por las de un compañero, sin salir del chat. Solo lee los tableros: nunca cambia nada.
 
-No necesitas instalar nada más ni saber programar. Tardas unos 5 minutos.
+Con un cliente que integre el runtime Node no necesitas instalar nada más ni saber programar. Tardas unos 5 minutos.
 
 ## Antes de empezar
 
-- **Claude Desktop** instalado y actualizado (Mac o Windows).
+- **Un cliente compatible con extensiones `.mcpb`**, instalado y actualizado. La extensión admite **macOS, Windows y Linux (incluido Ubuntu)**. En Linux, comprueba que tu cliente admite MCPB y proporciona Node.js 24+; si no lo incluye, tendrás que instalarlo.
 - **Acceso al tablero** de KanbanFlow que quieres consultar.
 
 ## 1. Consigue el token de tu tablero
@@ -28,7 +28,13 @@ El token es una clave que permite a Swimlane leer un tablero. Cada tablero tiene
 2. Haz **doble clic** en el fichero. Se abrirá Claude Desktop con la ventana de instalación.
 3. Pulsa **Install**.
 
-Si el doble clic no abre Claude: en Claude Desktop ve a **Settings → Extensions → Advanced settings → Install Extension…** y elige el fichero.
+Si el doble clic no abre Claude: en Claude Desktop ve a **Settings → Extensions → Advanced settings → Install Extension…** y elige el fichero. En otros clientes, utiliza su opción para importar extensiones MCPB.
+
+### Ubuntu / Linux
+
+Las versiones **0.0.3+** declaran Linux en el manifiesto; los `.mcpb` anteriores solo declaraban macOS y Windows y podían mostrar un aviso de sistema operativo incompatible. Descarga e instala la extensión actualizada para eliminar esa restricción.
+
+Esta compatibilidad corresponde al servidor Swimlane, no instala ni añade soporte Linux al propio cliente. Si tu cliente de Ubuntu no puede importar `.mcpb`, utiliza la [instalación npm](../README.md#other-clients-npx) con Node.js 24+ y configura el servidor como MCP local por stdio.
 
 ## 3. Configúrala
 
@@ -39,7 +45,7 @@ Claude te pedirá dos datos:
 | **KanbanFlow API tokens** | El token del paso 1. Si tienes varios, pégalos separados por comas. |
 | **Your KanbanFlow email** | El email con el que entras en KanbanFlow. Así Claude sabe cuáles son *tus* tareas. |
 
-Guarda y comprueba que la extensión está **activada**. El token se guarda cifrado en tu ordenador.
+Guarda y comprueba que la extensión está **activada**. Claude Desktop guarda el token cifrado en tu ordenador; en otros clientes, revisa cómo protegen la configuración.
 
 ## 4. Pruébala
 
