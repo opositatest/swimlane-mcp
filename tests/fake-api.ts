@@ -38,8 +38,13 @@ const task = (id: string, columnId: string, extra: Partial<ApiTask> = {}): ApiTa
 });
 
 export const todoTasks = [
-  task('t1', 'c-todo', { color: 'red', labels: [{ name: 'Bug' }], collaborators: [{ userId: 'u1' }] }),
-  task('t2', 'c-todo', { description: 'x'.repeat(400) }),
+  task('t1', 'c-todo', {
+    color: 'red',
+    labels: [{ name: 'Bug' }],
+    collaborators: [{ userId: 'u1' }],
+    totalSecondsSpent: 12600,
+  }),
+  task('t2', 'c-todo', { description: 'x'.repeat(400), totalSecondsSpent: 1800 }),
 ];
 export const doingTasks = [task('t3', 'c-doing', { responsibleUserId: 'u2', color: 'blue' })];
 export const doneTasks = [task('d1', 'c-done'), task('d2', 'c-done'), task('d3', 'c-done'), task('d4', 'c-done')];
@@ -62,9 +67,89 @@ export const usersB = [
   { _id: 'u8', fullName: 'Adam Smith', email: 'adam@example.com' },
 ];
 export const tasksB = [
-  task('b-1', 'x-todo', { swimlaneId: undefined, collaborators: [{ userId: 'u9' }] }),
+  task('b-1', 'x-todo', { swimlaneId: undefined, collaborators: [{ userId: 'u9' }], totalSecondsSpent: 4500 }),
   task('b-2', 'x-todo', { swimlaneId: undefined, collaborators: [{ userId: 'u8' }] }),
 ];
+
+// Time entries, as `GET /tasks/{id}/time-entries` answers them: every entry ever tracked on the task,
+// including a stopwatch split in parts (same `entryId`, different `partIndex`) and unattributed entries.
+export const timeEntries: Record<string, unknown[]> = {
+  t1: [
+    {
+      entryId: 'te1',
+      type: 'stopwatch',
+      userId: 'u1',
+      taskId: 't1',
+      startTimestamp: '2026-09-28T09:00:00Z',
+      endTimestamp: '2026-09-28T10:00:00Z',
+      partIndex: 0,
+    },
+    {
+      entryId: 'te1',
+      type: 'stopwatch',
+      userId: 'u1',
+      taskId: 't1',
+      startTimestamp: '2026-09-28T10:30:00Z',
+      endTimestamp: '2026-09-28T11:00:00Z',
+      partIndex: 1,
+    },
+    {
+      entryId: 'te2',
+      type: 'manual',
+      userId: 'u2',
+      taskId: 't1',
+      startTimestamp: '2026-09-28T12:00:00Z',
+      endTimestamp: '2026-09-28T13:30:00Z',
+    },
+    {
+      entryId: 'te3',
+      type: 'stopwatch',
+      userId: 'u1',
+      taskId: 't1',
+      startTimestamp: '2026-09-20T09:00:00Z',
+      endTimestamp: '2026-09-20T09:30:00Z',
+      partIndex: 0,
+    },
+  ],
+  t2: [
+    {
+      entryId: 'te5',
+      type: 'manual',
+      taskId: 't2',
+      startTimestamp: '2026-09-28T07:00:00Z',
+      endTimestamp: '2026-09-28T07:30:00Z',
+    },
+  ],
+  t3: [
+    {
+      entryId: 'te4',
+      type: 'stopwatch',
+      userId: 'u2',
+      taskId: 't3',
+      startTimestamp: '2026-09-28T08:00:00Z',
+      partIndex: 0,
+    },
+  ],
+  'b-1': [
+    {
+      entryId: 'teb1',
+      type: 'stopwatch',
+      userId: 'u9',
+      taskId: 'b-1',
+      startTimestamp: '2026-09-28T11:00:00Z',
+      endTimestamp: '2026-09-28T11:45:00Z',
+      partIndex: 0,
+    },
+    {
+      entryId: 'teb2',
+      type: 'manual',
+      userId: '825d35a91fa62346f8a4ad4a7210e3a9',
+      taskId: 'b-1',
+      startTimestamp: '2026-09-28T11:45:00Z',
+      endTimestamp: '2026-09-28T12:15:00Z',
+    },
+  ],
+};
 
 export const events = [
   ...Array.from({ length: 5 }, (_, i) => ({
@@ -79,6 +164,7 @@ export const events = [
           { property: 'columnId', oldValue: 'c-todo', newValue: 'c-doing' },
           { property: 'sortOrder', oldValue: 1, newValue: 2 },
           { property: 'description', oldValue: 'long old text', newValue: 'long new text' },
+          ...(i === 4 ? [{ property: 'totalSecondsSpent', oldValue: 7200, newValue: 12600 }] : []),
         ],
       },
     ],
@@ -95,6 +181,18 @@ export const events = [
     timestamp: '2026-09-28T10:06:00.000Z',
     detailedEvents: [{ eventType: 'taskCommentCreated', taskId: 't2' }],
   },
+  {
+    _id: 'e7',
+    userId: 'u2',
+    timestamp: '2026-09-28T10:07:00.000Z',
+    detailedEvents: [
+      {
+        eventType: 'taskChanged',
+        taskId: 't3',
+        changedProperties: [{ property: 'totalSecondsSpent', oldValue: 0, newValue: 7200 }],
+      },
+    ],
+  },
 ];
 
 const eventsB = [
@@ -109,6 +207,18 @@ const eventsB = [
     userId: 'u9',
     timestamp: '2026-09-28T11:05:00.000Z',
     detailedEvents: [{ eventType: 'taskCommentCreated', taskId: 'b-2' }],
+  },
+  {
+    _id: 'eb2',
+    userId: 'u9',
+    timestamp: '2026-09-28T11:50:00.000Z',
+    detailedEvents: [
+      {
+        eventType: 'taskChanged',
+        taskId: 'b-1',
+        changedProperties: [{ property: 'totalSecondsSpent', oldValue: 2700, newValue: 4500 }],
+      },
+    ],
   },
 ];
 const EVENTS_PAGE = 2;
@@ -139,6 +249,10 @@ export async function startFakeApi(): Promise<FakeApi> {
       if (url.pathname === '/tasks') return send(200, [{ columnId: 'x-todo', tasks: tasksB, tasksLimited: false }]);
       if (url.pathname === '/tasks/b-1') return send(200, tasksB[0]);
       if (url.pathname === '/tasks/b-2') return send(200, tasksB[1]);
+      if (url.pathname === '/tasks/b-1/time-entries') return send(200, timeEntries['b-1']);
+      if (url.pathname.startsWith('/tasks/') && url.pathname.endsWith('/time-entries')) {
+        return send(404, { errors: [{ message: 'Resource not found' }] });
+      }
       if (url.pathname === '/tasks/b-1/comments') {
         return send(200, [
           {
@@ -188,6 +302,13 @@ export async function startFakeApi(): Promise<FakeApi> {
     }
     if (url.pathname === '/tasks/t1') return send(200, todoTasks[0]);
     if (url.pathname === '/tasks/t2') return send(200, todoTasks[1]);
+    if (url.pathname === '/tasks/t3') return send(200, doingTasks[0]);
+    if (url.pathname === '/tasks/t1/time-entries') return send(200, timeEntries.t1);
+    if (url.pathname === '/tasks/t2/time-entries') return send(200, timeEntries.t2);
+    if (url.pathname === '/tasks/t3/time-entries') return send(200, timeEntries.t3);
+    if (url.pathname.startsWith('/tasks/') && url.pathname.endsWith('/time-entries')) {
+      return send(404, { errors: [{ message: 'Resource not found' }] });
+    }
     if (url.pathname === '/tasks/t1/comments') {
       return send(200, [
         { _id: 'k1', text: 'Looks good', authorUserId: 'u2', createdTimestamp: '2026-09-28T09:00:00Z' },

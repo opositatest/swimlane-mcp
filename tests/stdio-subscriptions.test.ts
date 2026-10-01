@@ -44,6 +44,7 @@ describe('MCP 2026 subscriptions over stdio', () => {
       'list_boards',
       'list_comments',
       'list_tasks',
+      'list_time_entries',
       'search_tasks',
     ]);
     expect(tools.every((tool) => tool.annotations.readOnlyHint)).toBe(true);

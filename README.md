@@ -28,6 +28,7 @@ Built on [TanStack AI](https://tanstack.com/ai) (`@tanstack/ai` + `@tanstack/ai-
 | `search_tasks` | Tasks whose text contains a query, across boards and columns (name, description, labels, custom fields or subtasks). Each task says which fields matched. KanbanFlow has no search endpoint, so it filters what it loads and reports partially loaded columns. |
 | `get_task` | One task in full — complete description, status, people, labels, color with the team's meaning, time tracking, subtasks and custom fields — plus its comments (author names and dates) to see mentions and discussion. |
 | `list_comments` | The most recent comments across the boards (newest first), with author, task and board resolved. Pass a person to get only the comments that mention them: KanbanFlow has no mention field, so it looks for the person's name inside the text. |
+| `list_time_entries` | The tracked time of a window, entry by entry: who tracked it, when it started and ended, how long it lasted and on which task. This is the only tool that breaks time down by day and by person; every other tool only knows the accumulated total of a task. |
 
 A person can be given by email, full name, part of the name or user id. It is matched on each board separately; the response says how it matched (`matchedBy`), which boards the person is not on, and warns when a partial name matches several people.
 
