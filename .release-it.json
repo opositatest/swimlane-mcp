@@ -1,6 +1,6 @@
 {
   "hooks": {
-    "after:bump": "npm run lint:check && npm test && npm run bundle:extension"
+    "after:bump": "npm run lint:check && npm run typecheck && npm test && npm run bundle:extension && npm run test:package"
   },
   "git": {
     "commitMessage": "chore: release v${version}",

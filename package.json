@@ -1,8 +1,16 @@
 {
   "name": "@opositatest/swimlane-mcp",
-  "version": "0.0.0",
+  "version": "0.0.3",
   "description": "Unofficial read-only MCP server for KanbanFlow: list a person's tasks across all your boards from any MCP client. Not affiliated with KanbanFlow.",
-  "keywords": ["mcp", "model-context-protocol", "kanbanflow", "kanban", "swimlane", "claude", "tanstack-ai"],
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "kanbanflow",
+    "kanban",
+    "swimlane",
+    "claude",
+    "tanstack-ai"
+  ],
   "homepage": "https://github.com/opositatest/swimlane-mcp",
   "bugs": "https://github.com/opositatest/swimlane-mcp/issues",
   "repository": {
@@ -26,7 +34,11 @@
   "bin": {
     "swimlane-mcp": "build/main.js"
   },
-  "files": ["build", "README.md", "LICENSE"],
+  "files": [
+    "build",
+    "README.md",
+    "LICENSE"
+  ],
   "engines": {
     "node": ">=24"
   },
@@ -35,22 +47,23 @@
   },
   "scripts": {
     "start": "node build/main.js",
-    "build": "rm -rf build && tsc -p tsconfig.build.json && chmod 755 build/main.js",
-    "dev": "npx @modelcontextprotocol/inspector node --env-file-if-exists=.env --import tsx src/main.ts",
+    "build": "node scripts/bundle-server.mjs",
+    "dev": "npm run build && npx @modelcontextprotocol/inspector node --env-file-if-exists=.env build/main.js",
     "typecheck": "tsc --noEmit",
     "lint": "biome lint .",
     "lint:fix": "biome lint --write .",
     "lint:check": "biome check",
     "format": "biome format --write .",
     "format:check": "biome format .",
-    "test": "vitest run",
+    "test": "npm run build && vitest run",
+    "test:package": "node --import tsx scripts/test-package.mjs",
     "prepublishOnly": "npm run lint:check && npm test && npm run build",
     "bundle:extension": "node scripts/bundle-extension.mjs",
     "release": "release-it"
   },
   "dependencies": {
     "@tanstack/ai": "^0.63.0",
-    "@tanstack/ai-mcp": "^0.6.0",
+    "@tanstack/ai-mcp": "0.6.0",
     "axios": "^1.20.0",
     "zod": "^4.6.5"
   },

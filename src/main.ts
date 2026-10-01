@@ -27,5 +27,7 @@ try {
 
 // --- CONEXIÓN DEL SERVIDOR ---
 // stdout solo transporta mensajes del protocolo: los logs van a stderr.
+// Both distributed builds apply scripts/stdio-compat.mjs to this adapter.
+// Use npm run dev / npm test (the bundled entry), not raw tsx, to test the transport.
 serveMCPStdio(server);
 console.error('swimlane-mcp: listening on stdio.');
