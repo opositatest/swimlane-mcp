@@ -16,7 +16,7 @@ jobs:
       fail-fast: false
       matrix:
         # 24 = LTS, the .node-version minimum and what Claude Desktop ships; 26 = Current.
-        # Windows and macOS because that is where Claude Desktop users are.
+        # Test Linux/Ubuntu too: the extension manifest supports all three platforms.
         os: [ubuntu-latest, windows-latest, macos-latest]
         node: ['24']
         include:

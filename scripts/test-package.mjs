@@ -2,7 +2,7 @@
 // exercise npm exec, the self-contained CLI and the Desktop entry point by stdio.
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { cpSync, mkdtempSync, rmSync } from 'node:fs';
+import { cpSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -72,6 +72,12 @@ async function check(target, protocol) {
 }
 
 try {
+  const manifest = JSON.parse(readFileSync(join(root, 'dist-extension', 'stage', 'manifest.json'), 'utf8'));
+  for (const platform of ['darwin', 'win32', 'linux']) {
+    assert.ok(manifest.compatibility.platforms.includes(platform), `Built extension must support ${platform}.`);
+  }
+  assert.ok(manifest.compatibility.platforms.includes(process.platform), 'Built extension excludes the CI platform.');
+  console.error(`PASS: built extension manifest supports ${process.platform} and all advertised platforms.`);
   const [{ filename }] = JSON.parse(runNpm(['pack', '--json', '--pack-destination', installed]));
   runNpm([
     'install',
