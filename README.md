@@ -66,7 +66,11 @@ Claude Desktop can also run it this way instead of the extension, in `claude_des
   "mcpServers": {
     "swimlane": {
       "command": "npx",
-      "args": ["-y", "@opositatest/swimlane-mcp"],
+      "args": [
+        "-y",
+        "--@opositatest:registry=https://registry.npmjs.org",
+        "@opositatest/swimlane-mcp@latest"
+      ],
       "env": {
         "KANBANFLOW_API_KEYS": "token_board_1,token_board_2",
         "KANBANFLOW_USER": "you@company.com"
@@ -76,16 +80,38 @@ Claude Desktop can also run it this way instead of the extension, in `claude_des
 }
 ```
 
-Pin a tested release for a team by appending its version to the package name (for example, `@opositatest/swimlane-mcp@0.0.2`).
+### Which version runs
+
+**Use `@latest` to request the latest published release. The package name on its own does not guarantee the latest version:** `npx` can use a local project dependency or cached metadata instead.
+
+| Argument | What it requests |
+|----------|------------------|
+| `@opositatest/swimlane-mcp@latest` | The release tagged `latest` on npm. Cached registry metadata can briefly lag behind a new publication. |
+| `@opositatest/swimlane-mcp@0.0.3` | Exactly that release, for teams that want to freeze a tested version. |
+| `@opositatest/swimlane-mcp` | No explicit version; it may use a local dependency rather than the latest release. |
+
+Restart the MCP server/client to pick up an update; a running server does not update itself. If `@latest` still resolves an older release just after publication, add `--prefer-online` before the package name to ask npm to revalidate cached metadata.
+
+The examples explicitly select npmjs.org for the `@opositatest` scope. This prevents a project's `.npmrc` from redirecting this server to GitHub Packages or another registry, without changing how the project's own npm commands resolve its packages.
 
 ### Claude Code
 
+With Node.js 24+ installed, copy and paste this command, replacing the tokens and email with your own values (one token per board; use just one if you only need one board):
+
 ```bash
-claude mcp add swimlane \
+claude mcp add --scope user \
   -e KANBANFLOW_API_KEYS="token_board_1,token_board_2" \
   -e KANBANFLOW_USER="you@company.com" \
-  -- npx -y @opositatest/swimlane-mcp
+  swimlane -- npx -y \
+  --@opositatest:registry=https://registry.npmjs.org \
+  @opositatest/swimlane-mcp@latest
 ```
+
+`--scope user` makes it available in all your projects. Restart Claude Code, check the connection with `/mcp`, and ask: "What tasks do I have in KanbanFlow?"
+
+If `swimlane` is already registered at user scope, first run `claude mcp remove --scope user swimlane`, then add it again with the command above. If it was registered at another scope, update or remove that entry at its original scope too.
+
+Replace `@latest` with an exact version (for example `@0.0.3`) to freeze a release you have tested. To change that version later, edit the existing configuration or remove and re-add the server at the same scope.
 
 ### Cursor / VS Code / OpenCode
 
@@ -93,12 +119,12 @@ Same `command` / `args` / `env` as above:
 
 - Cursor: `.cursor/mcp.json` → `mcpServers`
 - VS Code: `.vscode/mcp.json` → `servers` (add `"type": "stdio"`)
-- OpenCode: `opencode.json` → `mcp` with `"type": "local"`, `"command": ["npx", "-y", "@opositatest/swimlane-mcp"]` and `environment`
+- OpenCode: `opencode.json` → `mcp` with `"type": "local"`, `"command": ["npx", "-y", "--@opositatest:registry=https://registry.npmjs.org", "@opositatest/swimlane-mcp@latest"]` and `environment`
 
 ### Without npx (global installation)
 
 ```bash
-npm install -g @opositatest/swimlane-mcp@latest
+npm install -g --@opositatest:registry=https://registry.npmjs.org @opositatest/swimlane-mcp@latest
 claude mcp add swimlane \
   -e KANBANFLOW_API_KEYS="token_board_1,token_board_2" \
   -e KANBANFLOW_USER="you@company.com" \
@@ -109,6 +135,8 @@ For other clients, use `"command": "swimlane-mcp"` with no arguments; OpenCode u
 
 ### Troubleshooting startup
 
+- **`E404` from GitHub Packages / `CONNECTION_CLOSED`:** a project's `.npmrc` may redirect `@opositatest` to `https://npm.pkg.github.com`, but this package is published on npmjs.org. Use the examples above, including `--@opositatest:registry=https://registry.npmjs.org` before the package name. A plain `--registry` does not override a scoped registry mapping. Do not change your KanbanFlow tokens or the project's `.npmrc`.
+- **It keeps running an old version:** use `@opositatest/swimlane-mcp@latest` (or bump a pinned version) and restart the client. If registry metadata is stale just after publication, add `--prefer-online` before the package name. For a global installation, rerun the `npm install -g` command above; it does not update automatically.
 - **`Connection closed` / discovery hangs on version 0.0.1:** MCP 2026 clients can open a subscription before listing tools, which blocked the old stdio bridge. Version **0.0.2+** bundles the fix for both npm and the Desktop extension. Upgrade the global install, or use `@opositatest/swimlane-mcp@latest` in the npx arguments, then restart the MCP/client. No token change is needed.
 - **`swimlane-mcp: command not found` when using npx inside this repository:** npm may resolve the same-named local project instead of the installed package. For development, run `npm run build` and configure `node` with the **absolute path** to `build/main.js`, or use the global executable. Simply running the add command elsewhere will not help if the client later starts npx inside this repository.
 - **Node/PATH:** verify Node 24+ from the environment that launches the client. An absolute path to Node can avoid differences between GUI and terminal environments.
