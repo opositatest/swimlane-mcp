@@ -211,7 +211,11 @@ npm run test:package # after build + bundle:extension: installed tarball and Des
 
 Releases are made from GitHub: **Actions → Create Release → Run workflow**, then choose `patch`, `minor` or `major`.
 
-It runs [release-it](https://github.com/release-it/release-it): bumps the version, runs lint and tests, builds the Claude Desktop extension, commits and tags `vX.Y.Z`, creates the GitHub Release with the `.mcpb` attached and publishes to npm with provenance. It needs the `NPM_TOKEN` secret (an npm automation token with publish rights on `@opositatest`).
+It runs [release-it](https://github.com/release-it/release-it): bumps the version, runs lint and tests, builds the Claude Desktop extension, commits and tags `vX.Y.Z`, creates the GitHub Release with the `.mcpb` attached and publishes to npm with provenance.
+
+Publishing uses **trusted publishing (OIDC)**: npm authenticates the workflow through GitHub, so **no npm token is stored in this repository**. The trust relationship lives in npm (package → *Settings* → *Trusted publishing*), one connection per workflow file (`release.yml` and `publish.yml`), and only a maintainer with 2FA can create it. If a publish reports `ENEEDAUTH`, the *Workflow filename* of that connection does not match the file name exactly.
+
+npm never overwrites a version, so both workflows refuse to run when `package.json` is already on the registry; the fix is always to release the next version from *Create Release*. A publish can also land in **Staged Packages** instead of going live: a maintainer approves it with 2FA in npm → *Staged Packages*. (Tokens that bypass 2FA already cannot publish directly, and from January 2027 they will not be able to publish at all.)
 
 `Publish to npm` publishes an existing release again if that last step failed. CI (`ci.yml`) runs typecheck, lint, tests, build, a package-contents check, the extension build and installed-package protocol checks on Linux, Windows and macOS. `security.yml` runs `npm audit` and CodeQL every Monday.
 
