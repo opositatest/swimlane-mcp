@@ -4,6 +4,10 @@
 [![Node ≥24](https://img.shields.io/badge/node-%3E%3D24-brightgreen?logo=node.js&logoColor=white)](https://nodejs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 [![MCP](https://img.shields.io/badge/MCP-read--only-6b4fbb)](https://modelcontextprotocol.io)
+[![Linux](https://img.shields.io/badge/Linux-supported-FCC624?logo=linux&logoColor=black)](https://github.com/opositatest/swimlane-mcp/actions/workflows/ci.yml)
+[![macOS](https://img.shields.io/badge/macOS-supported-000000?logo=apple&logoColor=white)](https://github.com/opositatest/swimlane-mcp/actions/workflows/ci.yml)
+[![Windows](https://img.shields.io/badge/Windows-supported-0078D6?logo=windows&logoColor=white)](https://github.com/opositatest/swimlane-mcp/actions/workflows/ci.yml)
+[![CI](https://github.com/opositatest/swimlane-mcp/actions/workflows/ci.yml/badge.svg?branch=main&label=build)](https://github.com/opositatest/swimlane-mcp/actions/workflows/ci.yml)
 
 
 An unofficial, **read-only** [Model Context Protocol](https://modelcontextprotocol.io) server for [KanbanFlow](https://kanbanflow.com). It lets any MCP client (Claude Desktop, Claude Code, Cursor, VS Code, OpenCode…) list the tasks of a person — you, or anyone you name — across **all the boards you configure**. It is not tied to any board or team: each person configures their own boards.
@@ -87,8 +91,8 @@ Claude Desktop can also run it this way instead of the extension, in `claude_des
         "@opositatest/swimlane-mcp@latest"
       ],
       "env": {
-        "KANBANFLOW_API_KEYS": "token_board_1,token_board_2",
-        "KANBANFLOW_USER": "you@company.com"
+        "KANBANFLOW_API_KEYS": "KEY,key",
+        "KANBANFLOW_USER": "email@email.com"
       }
     }
   }
@@ -111,13 +115,13 @@ The examples explicitly select npmjs.org for the `@opositatest` scope. This prev
 
 ### Claude Code
 
-With Node.js 24+ installed, copy and paste this command, replacing the tokens and email with your own values (one token per board; use just one if you only need one board):
+With Node.js 24+ installed, copy and paste this command and replace the placeholders with your own values: `KEY,key` are your board tokens (one per board, comma separated; use just one if you only need one board) and `email@email.com` is your KanbanFlow email.
 
 ```bash
-claude mcp add --scope user \
-  -e KANBANFLOW_API_KEYS="token_board_1,token_board_2" \
-  -e KANBANFLOW_USER="you@company.com" \
-  swimlane -- npx -y --prefer-online \
+claude mcp add swimlane --scope user \
+  -e KANBANFLOW_API_KEYS="KEY,key" \
+  -e KANBANFLOW_USER="email@email.com" \
+  -- npx -y --prefer-online \
   --@opositatest:registry=https://registry.npmjs.org \
   @opositatest/swimlane-mcp@latest
 ```
@@ -140,7 +144,7 @@ Restart Claude Code, check the connection with `/mcp`, and ask: "What tasks do I
 
 1. Open the project where Swimlane was registered and check its entry/scope in `/mcp`.
 2. If it is `local`, run `claude mcp remove --scope local swimlane` from that project. For a `project` entry, use `--scope project` instead. If replacing an existing `user` entry, use `--scope user`.
-3. Run the recommended `claude mcp add --scope user …` command above with your existing tokens/email. It uses `npx --prefer-online …@latest`, so future releases are requested on server startup.
+3. Run the recommended `claude mcp add swimlane --scope user …` command above with your existing tokens/email. It uses `npx --prefer-online …@latest`, so future releases are requested on server startup.
 4. Remove any obsolete project-local or differently named duplicates; an old entry can still connect you to an old server.
 5. Restart Claude Code and check `/mcp` in another project too.
 
@@ -162,9 +166,9 @@ Same `command` / `args` / `env` as above:
 
 ```bash
 npm install -g --@opositatest:registry=https://registry.npmjs.org @opositatest/swimlane-mcp@latest
-claude mcp add --scope user swimlane \
-  -e KANBANFLOW_API_KEYS="token_board_1,token_board_2" \
-  -e KANBANFLOW_USER="you@company.com" \
+claude mcp add swimlane --scope user \
+  -e KANBANFLOW_API_KEYS="KEY,key" \
+  -e KANBANFLOW_USER="email@email.com" \
   -- swimlane-mcp
 ```
 
